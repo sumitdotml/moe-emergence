@@ -11,7 +11,7 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 ## Progress Log
 
 - [x] FFN (SwiGLU)
-- [⏳] MoE Layer (mostly done, just need to add load balancing)
+- [x] MoE Layer (with Switch/Mixtral-style load balancing)
 - [ ] Embedding
 - [ ] GQA
 - [ ] RoPE
@@ -21,4 +21,9 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 - [ ] Eval
 - [ ] Visualizations
 
-...
+## Formatting
+
+Ruff being used for formatting here.
+
+- **VSCode / Cursor**: Install the Ruff extension. Settings are in `.vscode/settings.json`.
+- **Neovim**: Configure Ruff inside nvim itself. For reference, see how I've done [mine](https://github.com/search?q=repo%3Asumitdotml%2Fdotfiles%20ruff&type=code). For formatting, my command is `<leader>gf`.

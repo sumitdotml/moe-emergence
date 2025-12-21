@@ -1,11 +1,19 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from typing import Optional
+from typing import Optional, NamedTuple
 from ffn import SwiGLU as Expert
 
 
-class MoERouter(nn.Module):
+class RouterOutput(NamedTuple):
+    topk_weights: Tensor  # [n_tokens, topk] - renormalized weights for selected experts
+    topk_indices: Tensor  # [n_tokens, topk] - which experts were selected
+    router_probs: (
+        Tensor  # [n_tokens, n_experts] - full probability distribution (for load balancing)
+    )
+
+
+class Router(nn.Module):
     r"""
     Mixture of Experts Router. Routes each token to the top-k most suitable experts
     based on learned routing weights, enabling sparse activation in MoE architectures.
@@ -73,7 +81,7 @@ class MoERouter(nn.Module):
         )
 
     # x is [batch, seqlen, hidden_dim]
-    def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor) -> RouterOutput:
         """
         being a bit comprehensive & verbose here as I'm learning it all, might clean this
         up later by for instance, getting rid of unused names & comments. but for now it's chill
@@ -85,90 +93,94 @@ class MoERouter(nn.Module):
         # Step 2: raw scores' computation for all experts
         router_matrix = self.W_router(x_flat)  # [batch*seqlen, n_ffn_experts]
 
-        # Step 3: softmax
-        probabilities = torch.softmax(router_matrix, dim=1)
+        # Step 3: softmax, gives full probability distribution over all experts for load balancing loss computation
+        router_probs = torch.softmax(router_matrix, dim=1)  # [n_tokens, n_experts]
 
         # Step 4: top-k experts' selection
         # topk_weights: [batch*seqlen, topk], topk_indices: [batch*seqlen, topk]
-        topk_weights, topk_indices = torch.topk(probabilities, k=self.topk)
+        topk_weights, topk_indices = torch.topk(router_probs, k=self.topk)
 
         # Step 5: weights' renormalization
-        topk_weights = MoERouter._renormalization(topk_weights)
+        topk_weights = self.renormalization(topk_weights)
 
-        return topk_weights, topk_indices
+        return RouterOutput(topk_weights, topk_indices, router_probs)
 
-    @staticmethod
-    def _renormalization(input: Tensor) -> Tensor:
+    def renormalization(self, input: Tensor) -> Tensor:
         total = input.sum(
             dim=-1, keepdim=True
         )  # total sum of experts' raw scores, not token count, hence -1 dim
-        renormalized = input / total  # [batch*seqlen, topk]
+        renormalized = input / (total + 1e-9)  # [batch*seqlen, topk]
         return renormalized
 
 
-class MoELayer(nn.Module):
+class MoEOutput(NamedTuple):
+    hidden_states: Tensor
+    balance_loss: Tensor
+
+
+class MoE(nn.Module):
     r"""
-        Mixture of Experts Layer. Replaces a standard dense feed-forward network with
-        multiple expert FFNs, routing each token to its top-k most suitable experts for
-        sparse, efficient computation while maintaining model capacity.
+    Mixture of Experts Layer. Replaces a standard dense feed-forward network with
+    multiple expert FFNs, routing each token to its top-k most suitable experts for
+    sparse, efficient computation while maintaining model capacity.
 
-        Architecture:
+    Architecture:
     ```
-        Input [batch, seq, hidden_dim]
-            ↓
-        Router: determines which k experts handle each token
-            ↓
-        Expert FFNs: selected experts process their assigned tokens in parallel
-            ↓
-        Weighted Combination: expert outputs combined using router weights
-            ↓
-        Output [batch, seq, hidden_dim]
-    ```
-
-        Mathematical formulation:
-    ```
-        For each token x:
-            weights, indices = Router(x)              # Select top-k experts
-            output = Σ(weights[i] * Expert[i](x))     # Weighted combination
+    Input [batch, seq, hidden_dim]
+        ↓
+    Router: determines which k experts handle each token
+        ↓
+    Expert FFNs: selected experts process their assigned tokens in parallel
+        ↓
+    Weighted Combination: expert outputs combined using router weights
+        ↓
+    Output [batch, seq, hidden_dim]
     ```
 
-        Computational Efficiency:
-        - Dense FFN: Uses all parameters for every token
-        - MoE: Only k out of n_experts are active per token
-        - Example: 8 experts, top-2 → 75% parameter reduction per token
+    Mathematical formulation:
+    ```
+    For each token x:
+        topk_weights, topk_indices = Router(x)              # Select top-k experts
+        output = Σ(weights[i] * Expert[i](x))     # Weighted combination
+    ```
 
-        Args:
-            hidden_dim: Dimension of token representations (e.g., 4096 in Mixtral)
-            ffn_dim: Intermediate dimension for expert FFNs (typically 3-4× hidden_dim)
-            n_experts: Total number of expert FFNs (e.g., 8 in Mixtral 8x7B)
-            topk: Number of experts activated per token (e.g., 2 in Mixtral)
-            device: Device to place parameters on
-            dtype: Data type for parameters
+    Computational Efficiency:
+    - Dense FFN: Uses all parameters for every token
+    - MoE: Only k out of n_experts are active per token
+    - Example: 8 experts, top-2 → 75% parameter reduction per token
 
-        Shapes:
-            Input: [batch_size, seq_len, hidden_dim]
-            Output: [batch_size, seq_len, hidden_dim]
+    Args:
+        hidden_dim: Dimension of token representations (e.g., 4096 in Mixtral)
+        ffn_dim: Intermediate dimension for expert FFNs (typically 3-4× hidden_dim)
+        n_experts: Total number of expert FFNs (e.g., 8 in Mixtral 8x7B)
+        topk: Number of experts activated per token (e.g., 2 in Mixtral)
+        device: Device to place parameters on
+        dtype: Data type for parameters
 
-        Example:
-            >>> # Mixtral-style configuration
-            >>> moe = MoELayer(
-            ...     hidden_dim=4096,
-            ...     ffn_dim=14336,
-            ...     n_experts=8,
-            ...     topk=2
-            ... )
-            >>> x = torch.randn(2, 512, 4096)  # 2 sequences, 512 tokens
-            >>> output = moe(x)
-            >>> output.shape  # [2, 512, 4096]
+    Shapes:
+        Input: [batch_size, seq_len, hidden_dim]
+        Output: [batch_size, seq_len, hidden_dim]
 
-        Note:
-            During training, experts naturally specialize in different types of content
-            (e.g., code vs prose, technical vs conversational). This emergent specialization
-            enables efficient sparse computation without sacrificing the model's ability to
-            handle diverse inputs.
+    Example:
+        >>> # Mixtral-style configuration
+        >>> moe = MoE(
+        ...     hidden_dim=4096,
+        ...     ffn_dim=14336,
+        ...     n_experts=8,
+        ...     topk=2
+        ... )
+        >>> x = torch.randn(2, 512, 4096)  # 2 sequences, 512 tokens
+        >>> output = moe(x)
+        >>> output.shape  # [2, 512, 4096]
 
-            The layer processes tokens by batching all tokens assigned to each expert,
-            running each expert once per forward pass for maximum efficiency.
+    Note:
+        During training, experts naturally specialize in different types of content
+        (e.g., code vs prose, technical vs conversational). This emergent specialization
+        enables efficient sparse computation without sacrificing the model's ability to
+        handle diverse inputs.
+
+        The layer processes tokens by batching all tokens assigned to each expert,
+        running each expert once per forward pass for maximum efficiency.
     """
 
     def __init__(
@@ -185,7 +197,7 @@ class MoELayer(nn.Module):
         self.hidden_dim = hidden_dim
         self.n_experts = n_experts
         self.topk = topk
-        self.router = MoERouter(
+        self.router = Router(
             hidden_dim=hidden_dim, n_ffn_experts=n_experts, topk=topk, **factory_kwargs
         )
         self.experts = nn.ModuleList(
@@ -195,30 +207,81 @@ class MoELayer(nn.Module):
             ]
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> MoEOutput:
         batch, seqlen, hidden_dim = x.shape
         x_flat = x.view(-1, hidden_dim)
-        weights, indices = self.router(
-            x
-        )  # router does its own flattening, so don't need to feed x_flat to it
+
+        # router does flattening internally, so no need to pass x_flat; just x is fine
+        topk_weights, topk_indices, router_probs = self.router(x)
         results = torch.zeros_like(x_flat)
 
-        # ====== EASY BUT SLOW AND LOUSY APPROACH =======
-        # the following works, but it processes tokens sequentially, so very inefficient for production
-        # but leaving it here for reference since this is the logic
-        # for i, token in enumerate(flattened_x):
-        #     for j in range(self.topk):
-        #         results[i] += (self.experts[indices[i][j]](x_flattened[i])) * weights[i][j]
-        # return results
-
-        # ======= FAST AND COMPUTATIONALLY EFFICIENT VECTORIZED APPROACH =======
         # reference: https://github.com/mistralai/mistral-inference/blob/main/src/mistral_inference/moe.py#L16
         for i, expert in enumerate(self.experts):
-            token_idx, topk_idx = torch.where(indices == i)
+            token_idx, topk_idx = torch.where(topk_indices == i)
             if len(token_idx) == 0:
                 continue
             # unsqueeze is to add 1 dim at the end since weights[token_idx, topk_idx] gives us 1d-tensors
-            results[token_idx] += weights[token_idx, topk_idx].unsqueeze(-1) * expert(
+            results[token_idx] += topk_weights[token_idx, topk_idx].unsqueeze(-1) * expert(
                 x_flat[token_idx]
             )
-        return results.view(batch, seqlen, hidden_dim)
+
+        balance_loss = self.compute_load_balance_loss(router_probs, topk_indices)
+        return MoEOutput(results.view(batch, seqlen, hidden_dim), balance_loss)
+
+    def compute_load_balance_loss(self, router_probs: Tensor, topk_indices: Tensor) -> Tensor:
+        """
+        Computes auxiliary load balancing loss (Switch Transformer / Mixtral style).
+
+        The loss encourages balanced expert usage by combining two signals:
+        - f_i: fraction of tokens ROUTED to expert i (hard assignment from top-k)
+        - P_i: mean PROBABILITY assigned to expert i (soft signal from router)
+
+        Loss = n_experts * Σ(f_i * P_i)
+
+        Mental model (for myself):
+        - If expert 1 is overloaded (high f_1), the loss penalizes high P_1
+        - Gradient flows through P_i (differentiable) to reduce routing probability
+        - This eventually reduces f_1 as fewer tokens get routed there
+
+        Theoretical minimum: 1.0 (when all experts are perfectly balanced)
+        - Perfect balance: f_i = P_i = 1/n_experts for all experts
+        - Loss = n_experts * n_experts * (1/n_experts)² = 1.0
+
+        Args:
+            router_probs: [n_tokens, n_experts] - full probability distribution from router
+            topk_indices: [n_tokens, topk] - which experts were selected for each token
+
+        Returns:
+            Scalar auxiliary loss to be added to main loss
+
+        Example (during training):
+            >>> moe = MoE(hidden_dim=4096, ffn_dim=14336, n_experts=8, topk=2)
+            >>> output, balance_loss = moe(x)
+            >>> total_loss = main_loss + α * balance_loss  # α typically 0.01 - 0.1
+        """
+        n_tokens = router_probs.shape[0]
+
+        # P_i: mean probability assigned to each expert across all tokens
+        # this is differentiable and provides gradient signal
+        # shape: [n_experts]
+        mean_probs = router_probs.mean(dim=0)
+
+        # f_i: fraction of tokens routed to each expert
+        # counts how many times each expert appears in top-k selections
+        # one_hot: [n_tokens, topk, n_experts] -> sums over tokens & topk positions
+        expert_counts = torch.zeros(
+            self.n_experts, device=router_probs.device, dtype=router_probs.dtype
+        )
+        for i in range(self.n_experts):
+            expert_counts[i] = (topk_indices == i).sum()
+
+        # normalizing by total assignments to get fractions: each token picks topk experts, so
+        # total assignments = n_tokens * topk
+        total_assignments = n_tokens * self.topk
+        token_fractions = expert_counts / total_assignments  # [n_experts]
+
+        # load balancing loss: n_experts * Σ(f_i * P_i)
+        # the n_experts scaling to ensure minimum loss of 1.0 at perfect balance
+        aux_loss = self.n_experts * (token_fractions * mean_probs).sum()
+
+        return aux_loss
