@@ -63,23 +63,3 @@ class SwiGLU(nn.Module):
         hidden = swish * signal_pathway
         output = self.W_down(hidden)
         return output
-
-
-if __name__ == "__main__":
-    torch.manual_seed(40)
-    device = torch.device(
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
-    hidden_dim = 8
-    ffn_dim = 16
-    dtype = torch.float16
-    print(f"Using device: {device}\ndata type: {dtype}")
-    x = torch.rand(3, 8, device=device, dtype=dtype)
-    swiglu = SwiGLU(hidden_dim, ffn_dim, device, dtype)
-    x_swiglu = swiglu(x)
-    print(f"""Out:
-    {x_swiglu.shape}""")
