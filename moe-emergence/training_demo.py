@@ -29,7 +29,9 @@ def create_fake_data(batch_size: int, seq_len: int, hidden_dim: int, vocab_size:
     return x, targets
 
 
-def compute_fake_lm_loss(moe_output: torch.Tensor, targets: torch.Tensor, vocab_size: int):
+def compute_fake_lm_loss(
+    moe_output: torch.Tensor, targets: torch.Tensor, vocab_size: int
+):
     """
     Fake LM loss for demonstration.
 
@@ -54,7 +56,9 @@ def compute_fake_lm_loss(moe_output: torch.Tensor, targets: torch.Tensor, vocab_
     return lm_loss
 
 
-def print_expert_utilization(moe: MoE, router_probs: torch.Tensor, topk_indices: torch.Tensor):
+def print_expert_utilization(
+    moe: MoE, router_probs: torch.Tensor, topk_indices: torch.Tensor
+):
     """Shows which experts are being used and how much."""
     n_tokens = topk_indices.shape[0]
 
@@ -113,13 +117,19 @@ def main():
 
     # Configure noise annealing
     # This will linearly reduce noise to 0 over the first 50% of training
-    moe.router.set_noise_annealing(total_steps=total_steps, anneal_fraction=anneal_fraction)
+    moe.router.set_noise_annealing(
+        total_steps=total_steps, anneal_fraction=anneal_fraction
+    )
 
     optimizer = torch.optim.Adam(moe.parameters(), lr=1e-3)
 
     print("\nNoise annealing schedule:")
-    print(f"  Steps 0-{int(total_steps * anneal_fraction)}: noise decays {noise_std} → 0")
-    print(f"  Steps {int(total_steps * anneal_fraction)}-{total_steps}: noise = 0 (exploitation)")
+    print(
+        f"  Steps 0-{int(total_steps * anneal_fraction)}: noise decays {noise_std} → 0"
+    )
+    print(
+        f"  Steps {int(total_steps * anneal_fraction)}-{total_steps}: noise = 0 (exploitation)"
+    )
 
     # ═══════════════════════════════════════════════════════════════════════
     # TRAINING LOOP
@@ -185,7 +195,9 @@ def main():
         if step % 5 == 0 or step == total_steps - 1:
             # Calculate current noise level
             if moe.router.training_step < moe.router.anneal_steps:
-                progress = moe.router.training_step.float() / moe.router.anneal_steps.float()
+                progress = (
+                    moe.router.training_step.float() / moe.router.anneal_steps.float()
+                )
                 current_noise = noise_std * (1.0 - progress.item())
             else:
                 current_noise = 0.0
@@ -203,7 +215,9 @@ def main():
             router_grad = moe.router.gate.weight.grad
             if router_grad is not None:
                 grad_norm = router_grad.norm().item()
-                print(f"    Gradient norm: {grad_norm:.4f} (>0 means router is learning)")
+                print(
+                    f"    Gradient norm: {grad_norm:.4f} (>0 means router is learning)"
+                )
 
     # ═══════════════════════════════════════════════════════════════════════
     # FINAL ANALYSIS
@@ -217,8 +231,15 @@ def main():
     moe.eval()  # Disable noise for evaluation
     with torch.no_grad():
         x, _ = create_fake_data(batch_size * 4, seq_len, hidden_dim, vocab_size)
-        _, _, router_probs, router_logits = moe.router(x)
-        topk_weights, topk_indices = torch.topk(router_probs, k=topk)
+        (
+            topk_weights,
+            topk_indices,
+            router_probs,
+            router_probs_clean,
+            router_logits,
+            entropy,
+        ) = moe.router(x)
+        # Note: using router_probs (post-noise) for utilization analysis matches training behavior
 
     print("\nFinal expert utilization (should be roughly balanced):")
     print_expert_utilization(moe, router_probs, topk_indices)

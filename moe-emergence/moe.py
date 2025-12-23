@@ -8,8 +8,14 @@ from ffn import SwiGLU as Expert
 class RouterOutput(NamedTuple):
     topk_weights: Tensor  # [n_tokens, topk] - renormalized weights for selected experts
     topk_indices: Tensor  # [n_tokens, topk] - which experts were selected per token
-    router_probs: Tensor  # [n_tokens, n_experts] - probs for routing (may have noise depending on annealing phase)
-    router_logits: Tensor  # [n_tokens, n_experts] - raw logits before softmax (for z-loss)
+    router_probs: Tensor  # [n_tokens, n_experts] - probs for routing (post-noise, for load balancing)
+    router_probs_clean: (
+        Tensor  # [n_tokens, n_experts] - clean probs before noise (for entropy logging)
+    )
+    router_logits: (
+        Tensor  # [n_tokens, n_experts] - raw logits before softmax (for z-loss)
+    )
+    entropy: Tensor  # [n_tokens] - router entropy computed from clean probs
 
 
 class Router(nn.Module):
@@ -41,7 +47,8 @@ class Router(nn.Module):
         hidden_dim: Dimension of input token representations (e.g., 4096 in Mixtral)
         n_experts: Total number of available experts (e.g., 8 in Mixtral)
         topk: Number of experts to activate per token (e.g., 2 in Mixtral)
-        noise_std: Standard deviation of noise to add to logits (default 0.1)
+        noise_std: Standard deviation for NoisyTop-k routing. Noise is only active
+            after calling set_noise_annealing(). (default 0.1)
         device: Device to place router parameters on
         dtype: Data type for router parameters
 
@@ -91,13 +98,14 @@ class Router(nn.Module):
             **factory_kwargs,
         )
 
-        ###################################################    
+        ###################################################
         ####### NOISY ROUTING STATE (for training) ########
         ###################################################
         # These buffers track training progress for noise annealing.
         # register_buffer: saved with model but not a learnable parameter
         self.register_buffer("training_step", torch.tensor(0, dtype=torch.long))
         self.register_buffer("anneal_steps", torch.tensor(0, dtype=torch.long))
+
     def set_noise_annealing(self, total_steps: int, anneal_fraction: float = 0.25):
         """
         Configures the noise annealing schedule.
@@ -130,10 +138,19 @@ class Router(nn.Module):
         # x is [batch, seqlen, hidden_dim]
         # Step 1: flattening batch and sequence dimensions
         _, _, hidden_dim = x.shape
-        x_flat = x.view(-1, hidden_dim)  # [batch*seqlen, hidden_dim]
+        x_flat = x.reshape(-1, hidden_dim)  # [batch*seqlen, hidden_dim]
 
         # Step 2: raw logits computation for all experts
         router_logits = self.gate(x_flat)  # [batch*seqlen, n_experts]
+
+        # Step 2.5: computation of CLEAN probabilities and entropy BEFORE adding noise
+        # used for logging/analysis and should not be confounded by noise
+        router_probs_clean = torch.softmax(
+            router_logits, dim=1
+        )  # [n_tokens, n_experts]
+        entropy = -(router_probs_clean * torch.log(router_probs_clean + 1e-9)).sum(
+            dim=-1
+        )  # [n_tokens]
 
         #######################################################################
         ####### NOISY TOP-K ROUTING (NoisyTop-k from Shazeer et al.) ##########
@@ -251,18 +268,30 @@ class Router(nn.Module):
             #######################################################################
             soft = topk_weights  # [batch*seq, 1] - the actual router probability
             hard = torch.ones_like(soft)  # [batch*seq, 1] - what we want in forward
-            topk_weights = hard + (soft - soft.detach())  # STE
+            if self.training:
+                topk_weights = hard + (soft - soft.detach())  # STE during training
+            else:
+                topk_weights = hard  # No STE overhead during inference
         else:
             # for top-k > 1: renormalizing so weights sum to 1
             # (relative weights still carry gradient info, no STE required)
             topk_weights = self._normalize_weights(topk_weights)
 
         # note to self: raw logits (before noise) are needed for z-loss computation
-        return RouterOutput(topk_weights, topk_indices, router_probs, router_logits)
+        return RouterOutput(
+            topk_weights,
+            topk_indices,
+            router_probs,
+            router_probs_clean,
+            router_logits,
+            entropy,
+        )
 
     def _normalize_weights(self, weights: Tensor) -> Tensor:
         """Renormalizes top-k weights to sum to 1.0 per token."""
-        total = weights.sum(dim=-1, keepdim=True)  # sum of experts' raw scores, not token count, hence dim=-1
+        total = weights.sum(
+            dim=-1, keepdim=True
+        )  # sum of experts' raw scores, not token count, hence dim=-1
         return weights / (total + 1e-9)  # [batch*seqlen, topk]
 
 
@@ -371,10 +400,18 @@ class MoE(nn.Module):
 
     def forward(self, x: Tensor) -> MoEOutput:
         batch, seqlen, hidden_dim = x.shape
-        x_flat = x.view(-1, hidden_dim)
+        x_flat = x.reshape(-1, hidden_dim)
 
         # router does flattening internally, so no need to pass x_flat; just x is fine
-        topk_weights, topk_indices, router_probs, router_logits = self.router(x)
+        (
+            topk_weights,
+            topk_indices,
+            router_probs,
+            router_probs_clean,
+            router_logits,
+            entropy,
+        ) = self.router(x)
+        # Note: router_probs_clean and entropy are available for logging but not used in forward pass
         results = torch.zeros_like(x_flat)
 
         # reference: https://github.com/mistralai/mistral-inference/blob/main/src/mistral_inference/moe.py#L16
@@ -398,7 +435,8 @@ class MoE(nn.Module):
         Computes auxiliary load balancing loss (Switch Transformer / Mixtral style).
 
         The loss encourages balanced expert usage by combining two signals:
-        - f_i: fraction of tokens ROUTED to expert i (hard assignment from top-k)
+        - f_i: fraction of total routing assignments to expert i (for top-k routing,
+              each token contributes k assignments, so sum of f_i = 1.0)
         - P_i: mean PROBABILITY assigned to expert i (soft signal from router)
 
         Loss = n_experts * Σ(f_i * P_i)
@@ -422,7 +460,9 @@ class MoE(nn.Module):
         Example (during training):
             >>> moe = MoE(hidden_dim=4096, ffn_dim=14336, n_experts=8, topk=2)
             >>> output, balance_loss, z_loss = moe(x)
-            >>> total_loss = lm_loss + α * balance_loss + β * z_loss  # α ~ 0.01, β ~ 0.001
+            >>> total_loss = (
+            ...     lm_loss + α * balance_loss + β * z_loss
+            ... )  # α ~ 0.01, β ~ 0.001
         """
         n_tokens, _ = router_probs.shape
 
