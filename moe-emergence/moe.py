@@ -1,3 +1,24 @@
+"""
+Standalone Mixture of Experts Implementation
+
+This module provides a reference MoE implementation with:
+- Router: Token-to-expert routing with NoisyTop-k and STE for top-1
+- MoE: Full MoE layer combining router + expert dispatch
+- Loss functions: Load balancing and z-loss for training stability
+
+Components exported to gpt2_moe.py:
+- Router: Used directly in MoEWrapper for GPT-2 integration
+- compute_load_balance_loss: Shared loss function
+- compute_z_loss: Shared loss function
+
+Note: The MoE class here uses SwiGLU experts (from ffn.py), which differs from
+the GPT-2 integration. In gpt2_moe.py, experts are deepcopies of the original
+GPT-2 MLP (GELU activation), preserving pretrained weights for warm-start.
+
+I simply decided to leave this file (alongside ffn.py) as a standalone reference
+implementation for future reference since SWiGLU FFN is the more "modern" choice for MoE.
+"""
+
 import torch
 import torch.nn as nn
 from torch import Tensor

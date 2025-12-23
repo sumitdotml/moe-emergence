@@ -88,7 +88,7 @@ class MoEWrapper(nn.Module):
         # creating experts as EXACT COPIES of original MLP. at step 0, any
         # expert produces the same output as the original MLP would have
         self.experts = nn.ModuleList()
-        for i in range(n_experts):
+        for _ in range(n_experts):
             expert = copy.deepcopy(original_mlp)
             # :::symmetry breaking:::
             # adding small perturbation for symmetry breaking. without this, all experts would
