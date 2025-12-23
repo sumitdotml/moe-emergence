@@ -122,7 +122,7 @@ class MoEWrapper(nn.Module):
         batch, seq_len, hidden_dim = hidden_states.shape
 
         # Flatten for routing: [batch * seq_len, hidden_dim]
-        hidden_flat = hidden_states.view(-1, hidden_dim)
+        hidden_flat = hidden_states.reshape(-1, hidden_dim)
 
         # Get routing decisions
         (
@@ -201,8 +201,9 @@ def compute_load_balance_loss(
     """
     Auxiliary load balancing loss (Switch Transformer / Mixtral style).
 
-    Encourages balanced expert usage by combining:
-    - f_i: fraction of tokens ROUTED to expert i (hard assignment)
+    Encourages balanced expert usage by combining two signals:
+    - f_i: fraction of total routing assignments to expert i (for top-k routing,
+          each token contributes k assignments, so sum of f_i = 1.0)
     - P_i: mean PROBABILITY assigned to expert i (soft signal)
 
     Loss = n_experts * Σ(f_i * P_i)
@@ -335,7 +336,7 @@ def collect_aux_outputs(moe_modules: dict) -> list[dict]:
         moe_modules: Dict from install_moe_layers()
 
     Returns:
-        List of dicts with router_probs, router_logits, topk_indices, layer_idx
+        List of dicts with routing stats per layer (probs, logits, indices, entropy)
     """
     aux_outputs = []
 
@@ -345,9 +346,11 @@ def collect_aux_outputs(moe_modules: dict) -> list[dict]:
                 {
                     "layer_idx": layer_idx,
                     "router_probs": moe.last_aux.router_probs,
+                    "router_probs_clean": moe.last_aux.router_probs_clean,
                     "router_logits": moe.last_aux.router_logits,
                     "topk_indices": moe.last_aux.topk_indices,
                     "topk_weights": moe.last_aux.topk_weights,
+                    "entropy": moe.last_aux.entropy,
                 }
             )
 

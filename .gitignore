@@ -5,10 +5,14 @@ build/
 dist/
 wheels/
 *.egg-info
+.ruff_cache/
 
 # Virtual environments
 .venv
 
 .DS_Store
 
-project-design/
+# Working notes (not for version control)
+MODELS-DEBATE.md
+
+!.claude/

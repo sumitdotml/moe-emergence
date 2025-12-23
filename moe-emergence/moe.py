@@ -65,10 +65,11 @@ class Router(nn.Module):
     Example:
         >>> router = Router(hidden_dim=4096, n_experts=8, topk=2)
         >>> x = torch.randn(2, 10, 4096)  # 2 sequences, 10 tokens each
-        >>> topk_weights, topk_indices, router_probs, router_logits = router(x)
-        >>> topk_weights.shape  # [20, 2]
-        >>> topk_indices.shape  # [20, 2]
-        >>> topk_weights.sum(dim=-1)  # All close to 1.0 (renormalized)
+        >>> out = router(x)  # RouterOutput with 6 fields
+        >>> out.topk_weights.shape  # [20, 2]
+        >>> out.topk_indices.shape  # [20, 2]
+        >>> out.router_probs_clean.shape  # [20, 8] - for entropy logging
+        >>> out.entropy.shape  # [20] - per-token routing entropy
 
     References:
         - Noisy Top-k Gating: Shazeer et al. "Outrageously Large Neural Networks" (2017)

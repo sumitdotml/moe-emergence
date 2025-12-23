@@ -58,18 +58,18 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 
 **What I Need to Write**
 
-| Component           | Status | File     | Notes                                   |
-| ------------------- | ------ | -------- | --------------------------------------- |
-| Router              | ✅     | `moe.py` | With noisy routing, STE, load balancing |
-| MoE Layer           | ✅     | `moe.py` | Dispatches tokens to experts            |
-| Load Balancing Loss | ✅     | `moe.py` | Switch Transformer style                |
-| Z-Loss              | ✅     | `moe.py` | Router logit stabilization              |
-| MoE Wrapper         | ⬜     | —        | Drop-in replacement for `GPT2MLP`       |
-| GPT-2 Surgery       | ⬜     | —        | `block.mlp = MoEWrapper(...)`           |
-| Sequence Packing    | ⬜     | —        | Efficient dataset without padding       |
-| Training Loop       | ⬜     | —        | With aux loss collection                |
-| Collapse Detection  | ⬜     | —        | Early stopping for ablation             |
-| Visualization       | ⬜     | —        | Heatmaps, entropy plots                 |
+| Component           | Status | File          | Notes                                   |
+| ------------------- | ------ | ------------- | --------------------------------------- |
+| Router              | ✅     | `moe.py`      | With noisy routing, STE, load balancing |
+| MoE Layer           | ✅     | `moe.py`      | Dispatches tokens to experts            |
+| Load Balancing Loss | ✅     | `moe.py`      | Switch Transformer style                |
+| Z-Loss              | ✅     | `moe.py`      | Router logit stabilization              |
+| MoE Wrapper         | ✅     | `gpt2_moe.py` | Drop-in replacement for `GPT2MLP`       |
+| GPT-2 Surgery       | ✅     | `gpt2_moe.py` | `install_moe_layers()` function         |
+| Sequence Packing    | ⬜     | —             | Efficient dataset without padding       |
+| Training Loop       | ⬜     | —             | With aux loss collection                |
+| Collapse Detection  | ⬜     | —             | Early stopping for ablation             |
+| Visualization       | ⬜     | —             | Heatmaps, entropy plots                 |
 
 ## Known Bottlenecks
 
