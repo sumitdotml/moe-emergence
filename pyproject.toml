@@ -16,3 +16,8 @@ line-length = 88
 [tool.ruff.format]
 docstring-code-format = true
 quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+]
