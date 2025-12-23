@@ -1,6 +1,6 @@
 # Decision: Warm-Start Experts via deepcopy
 
-**Date:** 2024-12-23 (documented retroactively)
+**Date:** 2025-12-23 (documented retroactively)
 **Status:** Accepted
 **Context Commit:** `31252b6`
 

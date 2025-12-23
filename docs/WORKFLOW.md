@@ -53,7 +53,7 @@ Ensures code matches V3 spec.
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| Code review | `YYYY-MM-DD-{component}-review.md` | `2024-12-23-moe-py-review.md` |
+| Code review | `NNN-YYYY-MM-DD-{component}-review.md` | `001-2025-12-23-moe-py-review.md` |
 | Decision | `NNN-{short-title}.md` | `003-warm-start-via-deepcopy.md` |
 | Experiment | `run-NNN-{description}.md` | `run-001-dense-baseline.md` |
 | Literature | `{author}-{year}-{title}.md` | `fedus-2021-switch-transformer.md` |
@@ -66,7 +66,7 @@ Ensures code matches V3 spec.
 |-------|---------|---------|
 | Chose between options | `/doc-decision` | `docs/decisions/NNN-*.md` |
 | Training run finished | `/doc-experiment` | `docs/experiments/run-NNN-*.md` |
-| Code reviewed | `/doc-review` | `docs/code-reviews/YYYY-MM-DD-*.md` |
+| Code reviewed | `/doc-review` | `docs/code-reviews/NNN-YYYY-MM-DD-*.md` |
 | Paper read | `/doc-paper` | `docs/literature/*.md` |
 | Bug fixed | `/doc-fix` | Entry in code-review or new fix doc |
 

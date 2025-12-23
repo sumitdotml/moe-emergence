@@ -129,10 +129,10 @@ Training a small MoE model on 3 domains (code, math, prose) to demonstrate exper
 
 ## Known Issues
 
-All issues from code review 2024-12-23 have been fixed:
+All issues from code review 2025-12-23 have been fixed:
 
-- `moe.py` fixes in commit `eea9294` - see `docs/code-reviews/001-2024-12-23-moe-py-review.md`
-- `gpt2_moe.py` fixes in commit `3110ba8` - see `docs/code-reviews/003-2024-12-23-gpt2-moe-fix.md`
+- `moe.py` fixes in commit `eea9294` - see `docs/code-reviews/001-2025-12-23-moe-py-review.md`
+- `gpt2_moe.py` fixes in commit `1f2b581` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 
 ## Budget Constraint
 

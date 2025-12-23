@@ -1,6 +1,6 @@
 # Decision: MoE in Last 4 Layers Only
 
-**Date:** 2024-12-23 (documented retroactively)
+**Date:** 2025-12-23 (documented retroactively)
 **Status:** Accepted
 **Context Commit:** `31252b6`
 

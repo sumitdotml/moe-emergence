@@ -12,7 +12,4 @@ wheels/
 
 .DS_Store
 
-# Working notes (not for version control)
-MODELS-DEBATE.md
-
 !.claude/
