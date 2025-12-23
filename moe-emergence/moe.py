@@ -89,6 +89,7 @@ class Router(nn.Module):
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         super().__init__()
+        assert topk <= n_experts, f"topk ({topk}) cannot exceed n_experts ({n_experts})"
         factory_kwargs = {"device": device, "dtype": dtype}
         self.topk = topk
         self.noise_std = noise_std
@@ -329,9 +330,7 @@ def compute_load_balance_loss(
     Example (during training):
         >>> moe = MoE(hidden_dim=4096, ffn_dim=14336, n_experts=8, topk=2)
         >>> output, balance_loss, z_loss = moe(x)
-        >>> total_loss = (
-        ...     lm_loss + α * balance_loss + β * z_loss
-        ... )  # α ~ 0.01, β ~ 0.001
+        >>> total_loss = lm_loss + α * balance_loss + β * z_loss  # α ~ 0.01, β ~ 0.001
     """
     n_tokens, _ = router_probs.shape
 
@@ -513,6 +512,7 @@ class MoE(nn.Module):
         dtype: Optional[torch.dtype] = None,
     ) -> None:
         super().__init__()
+        assert topk <= n_experts, f"topk ({topk}) cannot exceed n_experts ({n_experts})"
         factory_kwargs = {"device": device, "dtype": dtype}
         self.hidden_dim = hidden_dim
         self.n_experts = n_experts

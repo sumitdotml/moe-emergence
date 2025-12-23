@@ -95,10 +95,10 @@ Standardized comment style using `:::` markers for section headers:
 
 Per GPT-5.2's assessment, the following are **not required for V3 spec** but may be useful at scale:
 
-| Gap                     | Description                                    | Priority                       |
+| Gap                     | Description                                    | Status                         |
 | ----------------------- | ---------------------------------------------- | ------------------------------ |
-| 2D input support        | Router assumes 3D input `[batch, seq, hidden]` | Optional                       |
-| top-k > n_experts guard | No validation if `topk > n_experts`            | Optional                       |
+| 2D input support        | Router assumes 3D input `[batch, seq, hidden]` | Skipped (3D matches HF flow)   |
+| top-k > n_experts guard | No validation if `topk > n_experts`            | ✅ Fixed in `7ac4f87`          |
 | Faster expert batching  | Loop-based dispatch is O(n_experts)            | Optional (fine at small scale) |
 
 ---

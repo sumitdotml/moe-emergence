@@ -73,6 +73,7 @@ class MoEWrapper(nn.Module):
         perturbation_std: float = 1e-3,
     ) -> None:
         super().__init__()
+        assert topk <= n_experts, f"topk ({topk}) cannot exceed n_experts ({n_experts})"
         self.n_experts = n_experts
         self.topk = topk
 
@@ -119,7 +120,9 @@ class MoEWrapper(nn.Module):
         """
         batch, seq_len, hidden_dim = hidden_states.shape
 
-        hidden_flat = hidden_states.reshape(-1, hidden_dim) # [batch * seq_len, hidden_dim]
+        hidden_flat = hidden_states.reshape(
+            -1, hidden_dim
+        )  # [batch * seq_len, hidden_dim]
 
         (
             topk_weights,
@@ -167,7 +170,7 @@ class MoEWrapper(nn.Module):
             token_idx, topk_idx = torch.where(topk_indices == i)
 
             if len(token_idx) == 0:
-                continue 
+                continue
 
             expert_input = hidden_flat[token_idx]  # [num_selected, hidden_dim]
             weights = topk_weights[token_idx, topk_idx].unsqueeze(
@@ -181,6 +184,7 @@ class MoEWrapper(nn.Module):
 
 
 # :::GPT-2 Surgery: Installing MoE Layers:::
+
 
 def install_moe_layers(
     model,  # GPT2LMHeadModel
@@ -225,7 +229,13 @@ def install_moe_layers(
         original_mlp = block.mlp
 
         # MoE wrapper where experts are initialized as copies of original MLP
-        moe = MoEWrapper(original_mlp=original_mlp, hidden_dim=hidden_dim, n_experts=n_experts, topk=topk, noise_std=noise_std)
+        moe = MoEWrapper(
+            original_mlp=original_mlp,
+            hidden_dim=hidden_dim,
+            n_experts=n_experts,
+            topk=topk,
+            noise_std=noise_std,
+        )
 
         # replacing the original MLP with the MoE wrapper
         block.mlp = moe
@@ -315,9 +325,7 @@ if __name__ == "__main__":
     assert aux.entropy.shape == (n_tokens,)
     assert aux.topk_indices.min() >= 0
     assert aux.topk_indices.max() < n_experts
-    assert torch.allclose(
-        aux.topk_weights.sum(dim=-1), torch.ones(n_tokens), atol=1e-6
-    )
+    assert torch.allclose(aux.topk_weights.sum(dim=-1), torch.ones(n_tokens), atol=1e-6)
 
     # loss computation
     lb_loss = compute_load_balance_loss(aux.router_probs, aux.topk_indices, n_experts)
