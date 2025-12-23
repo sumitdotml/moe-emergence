@@ -17,9 +17,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from typing import Optional, NamedTuple
-
-# Reuse the Router from our standalone MoE implementation
-from moe import Router
+from moe import Router, compute_load_balance_loss, compute_z_loss
 
 
 class MoEWrapperOutput(NamedTuple):
@@ -40,20 +38,20 @@ class MoEWrapper(nn.Module):
     Drop-in replacement for GPT2MLP that routes to multiple expert copies.
 
     This wrapper:
-    1. Has the SAME interface as GPT2MLP (takes hidden_states, returns hidden_states)
-    2. Creates experts as deepcopies of the original MLP (warm-start)
-    3. Adds small noise for symmetry breaking
-    4. Stores auxiliary outputs for loss computation
+    1. has the same interface as GPT2MLP (takes hidden_states, returns hidden_states)
+    2. creates experts as deepcopies of the original MLP (warm-start)
+    3. adds small noise for symmetry breaking
+    4. stores auxiliary outputs for loss computation
 
-    The key insight: by using deepcopy, each expert starts as an exact copy of
-    the pretrained MLP. At step 0, the model behaves identically to the original
-    GPT-2. As training proceeds, experts gradually specialize.
+    By using deepcopy, each expert starts as an exact copy of the pretrained MLP.
+    At step 0, the model behaves identically to the pretrained GPT-2.
+    As training proceeds, experts gradually specialize.
 
     Args:
         original_mlp: The GPT2MLP module to replace (will be deepcopied)
-        hidden_dim: Hidden dimension (get from model.config.n_embd)
-        n_experts: Number of expert copies to create
-        topk: Number of experts to route each token to
+        hidden_dim: Hidden dimension (get from model.config.n_embd, e.g. 768 for GPT-2 small)
+        n_experts: Number of expert copies to create (e.g. 8 in Mixtral 8x7B)
+        topk: Number of experts to route each token to (e.g. 2 in Mixtral 8x7B)
         noise_std: Router noise for exploration (annealed during training)
         perturbation_std: Noise added to expert weights for symmetry breaking
 
@@ -62,7 +60,7 @@ class MoEWrapper(nn.Module):
         >>> model = GPT2LMHeadModel.from_pretrained("gpt2")
         >>> block = model.transformer.h[8]
         >>> moe = MoEWrapper(block.mlp, hidden_dim=768, n_experts=8, topk=1)
-        >>> block.mlp = moe  # Replace the MLP with MoE
+        >>> block.mlp = moe  # gotta do this to replace the MLP with MoE
     """
 
     def __init__(
@@ -78,7 +76,6 @@ class MoEWrapper(nn.Module):
         self.n_experts = n_experts
         self.topk = topk
 
-        # Router decides which experts handle each token
         self.router = Router(
             hidden_dim=hidden_dim,
             n_experts=n_experts,
@@ -86,16 +83,16 @@ class MoEWrapper(nn.Module):
             noise_std=noise_std,
         )
 
-        # Create experts as EXACT COPIES of original MLP
-        # This is the warm-start: at step 0, any expert produces the same output
-        # as the original MLP would have.
+        # :::warm-start:::
+        # creating experts as EXACT COPIES of original MLP. at step 0, any
+        # expert produces the same output as the original MLP would have
         self.experts = nn.ModuleList()
         for i in range(n_experts):
             expert = copy.deepcopy(original_mlp)
-
-            # Add small perturbation for symmetry breaking
-            # Without this, all experts would receive identical gradients
-            # Scale: 1e-3 * parameter std (NOT norm — see project design doc)
+            # :::symmetry breaking:::
+            # adding small perturbation for symmetry breaking. without this, all experts would
+            # receive identical gradients
+            # scale: 1e-3 * parameter std (NOT norm, see project design doc: MOE-PROJECT-DESIGN-V3.md)
             with torch.no_grad():
                 for param in expert.parameters():
                     noise = torch.randn_like(param) * param.std() * perturbation_std
@@ -103,7 +100,8 @@ class MoEWrapper(nn.Module):
 
             self.experts.append(expert)
 
-        # Storage for auxiliary outputs (retrieved after forward for loss computation)
+        # :::storage for auxiliary outputs:::
+        # retrieved after forward pass for loss computation
         self.last_aux: Optional[MoEWrapperOutput] = None
 
     def forward(self, hidden_states: Tensor) -> Tensor:
@@ -121,10 +119,8 @@ class MoEWrapper(nn.Module):
         """
         batch, seq_len, hidden_dim = hidden_states.shape
 
-        # Flatten for routing: [batch * seq_len, hidden_dim]
-        hidden_flat = hidden_states.reshape(-1, hidden_dim)
+        hidden_flat = hidden_states.reshape(-1, hidden_dim) # [batch * seq_len, hidden_dim]
 
-        # Get routing decisions
         (
             topk_weights,
             topk_indices,
@@ -134,11 +130,11 @@ class MoEWrapper(nn.Module):
             entropy,
         ) = self.router(hidden_states)
 
-        # Dispatch tokens to experts and combine outputs
+        # dispatching tokens to experts and combine outputs
         output_flat = self._dispatch_experts(hidden_flat, topk_weights, topk_indices)
 
-        # Store auxiliary outputs for loss computation
-        # These are retrieved by the training loop after forward pass
+        # storing auxiliary outputs for loss computation
+        # these are retrieved by the training loop after forward pass
         self.last_aux = MoEWrapperOutput(
             router_probs=router_probs,
             router_probs_clean=router_probs_clean,
@@ -148,17 +144,14 @@ class MoEWrapper(nn.Module):
             entropy=entropy,
         )
 
-        # Reshape back to original shape
-        return output_flat.view(batch, seq_len, hidden_dim)
+        # reshaping back to original shape
+        return output_flat.reshape(batch, seq_len, hidden_dim)
 
     def _dispatch_experts(
         self, hidden_flat: Tensor, topk_weights: Tensor, topk_indices: Tensor
     ) -> Tensor:
         """
         Dispatch tokens to their selected experts and combine outputs.
-
-        This uses the same loop-based approach as our standalone MoE.
-        Not the fastest, but clear and correct.
 
         Args:
             hidden_flat: [n_tokens, hidden_dim]
@@ -171,92 +164,23 @@ class MoEWrapper(nn.Module):
         results = torch.zeros_like(hidden_flat)
 
         for i, expert in enumerate(self.experts):
-            # Find which (token, k) pairs selected this expert
             token_idx, topk_idx = torch.where(topk_indices == i)
 
             if len(token_idx) == 0:
-                continue  # No tokens routed to this expert
+                continue 
 
-            # Get the tokens and their weights for this expert
             expert_input = hidden_flat[token_idx]  # [num_selected, hidden_dim]
             weights = topk_weights[token_idx, topk_idx].unsqueeze(
                 -1
             )  # [num_selected, 1]
 
-            # Run expert and accumulate weighted output
             expert_output = expert(expert_input)  # [num_selected, hidden_dim]
             results[token_idx] += weights * expert_output
 
         return results
 
 
-# =============================================================================
-# Loss Functions (reused from moe.py, but included here for convenience)
-# =============================================================================
-
-
-def compute_load_balance_loss(
-    router_probs: Tensor, topk_indices: Tensor, n_experts: int
-) -> Tensor:
-    """
-    Auxiliary load balancing loss (Switch Transformer / Mixtral style).
-
-    Encourages balanced expert usage by combining two signals:
-    - f_i: fraction of total routing assignments to expert i (for top-k routing,
-          each token contributes k assignments, so sum of f_i = 1.0)
-    - P_i: mean PROBABILITY assigned to expert i (soft signal)
-
-    Loss = n_experts * Σ(f_i * P_i)
-
-    Minimum value is 1.0 when perfectly balanced.
-
-    Args:
-        router_probs: [n_tokens, n_experts] - softmax probabilities from router
-        topk_indices: [n_tokens, topk] - selected expert indices
-        n_experts: Total number of experts
-
-    Returns:
-        Scalar loss value
-    """
-    n_tokens = router_probs.shape[0]
-    topk = topk_indices.shape[1]
-
-    # P_i: mean probability assigned to each expert
-    mean_probs = router_probs.mean(dim=0)  # [n_experts]
-
-    # f_i: fraction of tokens routed to each expert
-    flat_indices = topk_indices.view(-1)
-    expert_counts = torch.bincount(flat_indices, minlength=n_experts).float()
-    total_assignments = n_tokens * topk
-    token_fractions = expert_counts / total_assignments  # [n_experts]
-
-    # Load balancing loss
-    return n_experts * (token_fractions * mean_probs).sum()
-
-
-def compute_z_loss(router_logits: Tensor) -> Tensor:
-    """
-    Z-loss for router logit stabilization (ST-MoE, Zoph et al. 2022).
-
-    Penalizes large logit magnitudes to prevent:
-    - Extremely peaked softmax (kills exploration)
-    - Numerical instability (NaN/Inf)
-    - Dead experts with very negative logits
-
-    Args:
-        router_logits: [n_tokens, n_experts] - raw logits before softmax
-
-    Returns:
-        Scalar loss value
-    """
-    logsumexp = torch.logsumexp(router_logits, dim=-1)  # [n_tokens]
-    return torch.mean(logsumexp**2)
-
-
-# =============================================================================
-# GPT-2 Surgery: Installing MoE Layers
-# =============================================================================
-
+# :::GPT-2 Surgery: Installing MoE Layers:::
 
 def install_moe_layers(
     model,  # GPT2LMHeadModel
@@ -266,9 +190,9 @@ def install_moe_layers(
     noise_std: float = 0.1,
 ) -> tuple:
     """
-    Replace specified GPT-2 MLP layers with MoE wrappers.
+    Replaces specified GPT-2 MLP layers with MoE wrappers.
 
-    This is "model surgery" — we swap out the MLP modules but leave
+    This is "model surgery": we swap out the MLP modules but leave
     everything else (attention, layer norms, residual connections) untouched.
     HuggingFace's forward pass works unchanged.
 
@@ -297,25 +221,16 @@ def install_moe_layers(
     hidden_dim = model.config.n_embd  # 768 for GPT-2 small
 
     for layer_idx in moe_layers:
-        # Get the transformer block
         block = model.transformer.h[layer_idx]
-
-        # Get the original MLP
         original_mlp = block.mlp
 
-        # Create MoE wrapper (experts initialized as copies of original)
-        moe = MoEWrapper(
-            original_mlp=original_mlp,
-            hidden_dim=hidden_dim,
-            n_experts=n_experts,
-            topk=topk,
-            noise_std=noise_std,
-        )
+        # MoE wrapper where experts are initialized as copies of original MLP
+        moe = MoEWrapper(original_mlp=original_mlp, hidden_dim=hidden_dim, n_experts=n_experts, topk=topk, noise_std=noise_std)
 
-        # Replace the MLP with MoE wrapper
+        # replacing the original MLP with the MoE wrapper
         block.mlp = moe
 
-        # Store reference for auxiliary output retrieval
+        # storing reference for auxiliary outputs retrieval
         moe_modules[layer_idx] = moe
 
         print(
@@ -328,15 +243,15 @@ def install_moe_layers(
 
 def collect_aux_outputs(moe_modules: dict) -> list[dict]:
     """
-    Collect auxiliary outputs from all MoE layers after a forward pass.
+    Collects auxiliary outputs from all MoE layers after a forward pass.
 
-    Call this after model(input_ids) to get routing info for loss computation.
+    This is called after `model(input_ids)` to get routing stats for loss computation.
 
     Args:
-        moe_modules: Dict from install_moe_layers()
+        moe_modules: Dict from `install_moe_layers()`
 
     Returns:
-        List of dicts with routing stats per layer (probs, logits, indices, entropy)
+        List of dicts with routing stats per layer (probs, probs_clean, logits, indices, weights, entropy)
     """
     aux_outputs = []
 
@@ -357,15 +272,12 @@ def collect_aux_outputs(moe_modules: dict) -> list[dict]:
     return aux_outputs
 
 
-# =============================================================================
-# Quick Verification
-# =============================================================================
+# :::Quick Verification:::
 
 if __name__ == "__main__":
-    # Quick test without actually loading GPT-2 (to avoid large download)
+    # quick test without actually loading GPT-2 to avoid large download
     print("Testing MoEWrapper with a dummy MLP...")
 
-    # Create a dummy MLP similar to GPT2MLP
     class DummyMLP(nn.Module):
         def __init__(self, hidden_dim=768, ffn_dim=3072):
             super().__init__()
@@ -379,23 +291,46 @@ if __name__ == "__main__":
     dummy_mlp = DummyMLP()
     moe = MoEWrapper(dummy_mlp, hidden_dim=768, n_experts=8, topk=1)
 
-    # Test forward pass
     x = torch.randn(2, 10, 768)  # [batch=2, seq=10, hidden=768]
     output = moe(x)
 
-    print(f"✓ Input shape:  {x.shape}")
-    print(f"✓ Output shape: {output.shape}")
-    print(f"✓ Shapes match: {x.shape == output.shape}")
+    assert output.shape == x.shape, (
+        f"Output shape {output.shape} does not match input shape {x.shape}"
+    )
+    print(f"Input shape:  {x.shape}")
+    print(f"Output shape: {output.shape}")
 
-    # Check aux outputs
     aux = moe.last_aux
-    print(f"✓ Router probs shape: {aux.router_probs.shape}")  # [20, 8]
-    print(f"✓ Topk indices shape: {aux.topk_indices.shape}")  # [20, 1]
+    assert aux is not None, "Aux outputs are not populated"
 
-    # Test loss computation
-    lb_loss = compute_load_balance_loss(aux.router_probs, aux.topk_indices, n_experts=8)
+    n_tokens = x.shape[0] * x.shape[1]
+    n_experts = moe.n_experts
+    topk = moe.topk
+
+    assert aux.router_probs.shape == (n_tokens, n_experts)
+    assert aux.router_probs_clean.shape == (n_tokens, n_experts)
+    assert aux.router_logits.shape == (n_tokens, n_experts)
+    assert aux.topk_indices.shape == (n_tokens, topk)
+    assert aux.topk_weights.shape == (n_tokens, topk)
+    assert aux.entropy.shape == (n_tokens,)
+    assert aux.topk_indices.min() >= 0
+    assert aux.topk_indices.max() < n_experts
+    assert torch.allclose(
+        aux.topk_weights.sum(dim=-1), torch.ones(n_tokens), atol=1e-6
+    )
+
+    # loss computation
+    lb_loss = compute_load_balance_loss(aux.router_probs, aux.topk_indices, n_experts)
     z_loss = compute_z_loss(aux.router_logits)
-    print(f"✓ Load balance loss: {lb_loss.item():.4f} (target ~1.0)")
-    print(f"✓ Z-loss: {z_loss.item():.4f}")
+    assert lb_loss.ndim == 0, "Load balance loss is not scalar"
+    assert z_loss.ndim == 0, "Z-loss is not scalar"
+    assert torch.isfinite(lb_loss), "Load balance loss is not finite"
+    assert torch.isfinite(z_loss), "Z-loss is not finite"
+    print(f"Load balance loss: {lb_loss.item():.4f} (target ~1.0)")
+    print(f"Z-loss: {z_loss.item():.4f}")
 
-    print("\n✅ MoEWrapper ready for GPT-2 integration!")
+    loss = output.mean()
+    loss.backward()
+    router_grad = moe.router.gate.weight.grad
+    assert router_grad is not None, "Router has no gradient"
+    assert router_grad.abs().sum() > 0, "Router gradient is zero"

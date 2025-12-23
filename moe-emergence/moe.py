@@ -296,6 +296,138 @@ class Router(nn.Module):
         return weights / (total + 1e-9)  # [batch*seqlen, topk]
 
 
+def compute_load_balance_loss(
+    router_probs: Tensor, topk_indices: Tensor, n_experts: int
+) -> Tensor:
+    """
+    Computes auxiliary load balancing loss (Switch Transformer / Mixtral style).
+
+    The loss encourages balanced expert usage by combining two signals:
+    - f_i: fraction of total routing assignments to expert i (for top-k routing,
+          each token contributes k assignments, so sum of f_i = 1.0)
+    - P_i: mean PROBABILITY assigned to expert i (soft signal from router)
+
+    Loss = n_experts * Σ(f_i * P_i)
+
+    Mental model (for myself):
+    - If expert 1 is overloaded (high f_1), the loss penalizes high P_1
+    - Gradient flows through P_i (differentiable) to reduce routing probability
+    - This eventually reduces f_1 as fewer tokens get routed there
+
+    Theoretical minimum: 1.0 (when all experts are perfectly balanced)
+    - Perfect balance: f_i = P_i = 1/n_experts for all experts
+    - Loss = n_experts * n_experts * (1/n_experts)² = 1.0
+
+    Args:
+        router_probs: [n_tokens, n_experts] - full probability distribution from router
+        topk_indices: [n_tokens, topk] - which experts were selected for each token
+        n_experts: Total number of experts
+
+    Returns:
+        Scalar auxiliary loss to be added to main loss
+
+    Example (during training):
+        >>> moe = MoE(hidden_dim=4096, ffn_dim=14336, n_experts=8, topk=2)
+        >>> output, balance_loss, z_loss = moe(x)
+        >>> total_loss = (
+        ...     lm_loss + α * balance_loss + β * z_loss
+        ... )  # α ~ 0.01, β ~ 0.001
+    """
+    n_tokens, _ = router_probs.shape
+
+    # P_i: mean probability assigned to each expert across all tokens
+    # this is differentiable and provides gradient signal
+    # shape: [n_experts]
+    mean_probs = router_probs.mean(dim=0)
+
+    # f_i: fraction of tokens routed to each expert
+    # counts how many times each expert appears in top-k selections
+    # two ways to count: using loop or bincount (bincount is faster)
+
+    # 1. using loop (I'll leave this here since this is easier to intuit for me)
+    # expert_counts = torch.zeros(
+    #     n_experts, device=router_probs.device, dtype=router_probs.dtype
+    # )
+    # for i in range(n_experts):
+    #     expert_counts[i] = (topk_indices == i).sum()
+
+    # 2. using bincount (faster than loop, not so intuitive for me; but I'll get used to it)
+    flat_indices = topk_indices.view(-1)  # [n_tokens * topk]
+    expert_counts = torch.bincount(flat_indices, minlength=n_experts).to(
+        router_probs.dtype
+    )  # [n_experts]
+
+    # normalizing by total assignments to get fractions: each token picks topk experts, so
+    # total assignments = n_tokens * topk
+    total_assignments = n_tokens * topk_indices.shape[1]
+    token_fractions = expert_counts / total_assignments  # [n_experts]
+
+    # load balancing loss: n_experts * Σ(f_i * P_i)
+    # the n_experts scaling to ensure minimum loss of 1.0 at perfect balance
+    aux_loss = n_experts * (token_fractions * mean_probs).sum()
+
+    return aux_loss
+
+
+def compute_z_loss(router_logits: Tensor) -> Tensor:
+    r"""
+    Z-LOSS: Router Logit Stabilization (from ST-MoE, Zoph et al. 2022)
+
+    THE PROBLEM:
+    ────────────
+    During training, router logits can drift to extreme values:
+
+      • Very large positive logits → softmax becomes extremely peaked
+        → one expert gets probability ≈1.0, others ≈0.0
+        → kills exploration, router becomes overconfident
+
+      • Very large negative logits → expert becomes effectively "dead"
+        → even load balancing can't revive it easily
+
+      • Numerical instability → NaN/Inf in softmax, training crashes
+
+    Example of what can go wrong:
+        logits = [50.0, -30.0, -25.0, -40.0, ...]
+        probs  = [1.0,   0.0,   0.0,   0.0, ...]  # Expert 0 monopolizes
+
+    THE SOLUTION (Z-LOSS):
+    ──────────────────────
+    Penalize large logit magnitudes via log-sum-exp:
+
+        z_loss = mean( logsumexp(logits)² )
+
+    WHY LOGSUMEXP?
+    ──────────────
+    logsumexp(x) ≈ max(x) when one logit dominates
+    logsumexp(x) ≈ log(n) + mean(x) when logits are similar
+
+    By penalizing logsumexp², we:
+      • Discourage any single logit from being too large
+      • Keep all logits in a reasonable range
+      • Maintain numerical stability
+
+    EXAMPLE:
+    ───────
+
+    Healthy logits:  [2.0, 1.5, 1.0, 0.5]  → logsumexp ≈ 2.8  → z_loss ≈ 7.8
+    Unhealthy:       [50.0, -30, -25, -40] → logsumexp ≈ 50   → z_loss ≈ 2500
+
+    The unhealthy case gets heavily penalized.
+
+    USAGE (in training):
+    ────────────────────
+    total_loss = lm_loss + α * balance_loss + β * z_loss
+
+    Typical β (z_loss coefficient): 1e-3 to 1e-2
+    (Much smaller than balance_loss coefficient because z_loss values are larger)
+    """
+    # logsumexp along expert dimension
+    logsumexp = torch.logsumexp(
+        router_logits, dim=-1
+    )  # shape: [n_tokens] - one value per token
+    return torch.mean(logsumexp**2)
+
+
 class MoEOutput(NamedTuple):
     hidden_states: Tensor
     balance_loss: Tensor
@@ -425,135 +557,8 @@ class MoE(nn.Module):
                 -1
             ) * expert(x_flat[token_idx])
 
-        balance_loss = self.compute_load_balance_loss(router_probs, topk_indices)
-        z_loss = self.compute_z_loss(router_logits)
+        balance_loss = compute_load_balance_loss(
+            router_probs, topk_indices, self.n_experts
+        )
+        z_loss = compute_z_loss(router_logits)
         return MoEOutput(results.view(batch, seqlen, hidden_dim), balance_loss, z_loss)
-
-    def compute_load_balance_loss(
-        self, router_probs: Tensor, topk_indices: Tensor
-    ) -> Tensor:
-        """
-        Computes auxiliary load balancing loss (Switch Transformer / Mixtral style).
-
-        The loss encourages balanced expert usage by combining two signals:
-        - f_i: fraction of total routing assignments to expert i (for top-k routing,
-              each token contributes k assignments, so sum of f_i = 1.0)
-        - P_i: mean PROBABILITY assigned to expert i (soft signal from router)
-
-        Loss = n_experts * Σ(f_i * P_i)
-
-        Mental model (for myself):
-        - If expert 1 is overloaded (high f_1), the loss penalizes high P_1
-        - Gradient flows through P_i (differentiable) to reduce routing probability
-        - This eventually reduces f_1 as fewer tokens get routed there
-
-        Theoretical minimum: 1.0 (when all experts are perfectly balanced)
-        - Perfect balance: f_i = P_i = 1/n_experts for all experts
-        - Loss = n_experts * n_experts * (1/n_experts)² = 1.0
-
-        Args:
-            router_probs: [n_tokens, n_experts] - full probability distribution from router
-            topk_indices: [n_tokens, topk] - which experts were selected for each token
-
-        Returns:
-            Scalar auxiliary loss to be added to main loss
-
-        Example (during training):
-            >>> moe = MoE(hidden_dim=4096, ffn_dim=14336, n_experts=8, topk=2)
-            >>> output, balance_loss, z_loss = moe(x)
-            >>> total_loss = (
-            ...     lm_loss + α * balance_loss + β * z_loss
-            ... )  # α ~ 0.01, β ~ 0.001
-        """
-        n_tokens, _ = router_probs.shape
-
-        # P_i: mean probability assigned to each expert across all tokens
-        # this is differentiable and provides gradient signal
-        # shape: [n_experts]
-        mean_probs = router_probs.mean(dim=0)
-
-        # f_i: fraction of tokens routed to each expert
-        # counts how many times each expert appears in top-k selections
-        # two ways to count: using loop or bincount (bincount is faster)
-
-        # 1. using loop (I'll leave this here since this is easier to intuit for me)
-        # expert_counts = torch.zeros(
-        #     self.n_experts, device=router_probs.device, dtype=router_probs.dtype
-        # )
-        # for i in range(self.n_experts):
-        #     expert_counts[i] = (topk_indices == i).sum()
-
-        # 2. using bincount (faster than loop, not so intuitive for me; but I'll get used to it)
-        flat_indices = topk_indices.view(-1)  # [n_tokens * topk]
-        expert_counts = torch.bincount(flat_indices, minlength=self.n_experts).to(
-            router_probs.dtype
-        )  # [n_experts]
-
-        # normalizing by total assignments to get fractions: each token picks topk experts, so
-        # total assignments = n_tokens * topk
-        total_assignments = n_tokens * self.topk
-        token_fractions = expert_counts / total_assignments  # [n_experts]
-
-        # load balancing loss: n_experts * Σ(f_i * P_i)
-        # the n_experts scaling to ensure minimum loss of 1.0 at perfect balance
-        aux_loss = self.n_experts * (token_fractions * mean_probs).sum()
-
-        return aux_loss
-
-    def compute_z_loss(self, router_logits: Tensor) -> Tensor:
-        r"""
-        Z-LOSS: Router Logit Stabilization (from ST-MoE, Zoph et al. 2022)
-
-        THE PROBLEM:
-        ────────────
-        During training, router logits can drift to extreme values:
-
-          • Very large positive logits → softmax becomes extremely peaked
-            → one expert gets probability ≈1.0, others ≈0.0
-            → kills exploration, router becomes overconfident
-
-          • Very large negative logits → expert becomes effectively "dead"
-            → even load balancing can't revive it easily
-
-          • Numerical instability → NaN/Inf in softmax, training crashes
-
-        Example of what can go wrong:
-            logits = [50.0, -30.0, -25.0, -40.0, ...]
-            probs  = [1.0,   0.0,   0.0,   0.0, ...]  # Expert 0 monopolizes
-
-        THE SOLUTION (Z-LOSS):
-        ──────────────────────
-        Penalize large logit magnitudes via log-sum-exp:
-
-            z_loss = mean( logsumexp(logits)² )
-
-        WHY LOGSUMEXP?
-        ──────────────
-        logsumexp(x) ≈ max(x) when one logit dominates
-        logsumexp(x) ≈ log(n) + mean(x) when logits are similar
-
-        By penalizing logsumexp², we:
-          • Discourage any single logit from being too large
-          • Keep all logits in a reasonable range
-          • Maintain numerical stability
-
-        EXAMPLE:
-        ───────
-
-        Healthy logits:  [2.0, 1.5, 1.0, 0.5]  → logsumexp ≈ 2.8  → z_loss ≈ 7.8
-        Unhealthy:       [50.0, -30, -25, -40] → logsumexp ≈ 50   → z_loss ≈ 2500
-
-        The unhealthy case gets heavily penalized.
-
-        USAGE (in training):
-        ────────────────────
-        total_loss = lm_loss + α * balance_loss + β * z_loss
-
-        Typical β (z_loss coefficient): 1e-3 to 1e-2
-        (Much smaller than balance_loss coefficient because z_loss values are larger)
-        """
-        # logsumexp along expert dimension
-        logsumexp = torch.logsumexp(
-            router_logits, dim=-1
-        )  # shape: [n_tokens] - one value per token
-        return torch.mean(logsumexp**2)
