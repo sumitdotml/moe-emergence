@@ -129,10 +129,17 @@ Training a small MoE model on 3 domains (code, math, prose) to demonstrate exper
 
 ## Known Issues
 
-All issues from code review 2025-12-23 have been fixed:
+All issues from code reviews have been fixed:
 
 - `moe.py` fixes in commit `eea9294` - see `docs/code-reviews/001-2025-12-23-moe-py-review.md`
-- `gpt2_moe.py` fixes in commit `1f2b581` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
+- `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
+- Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
+
+## Current Status (2025-12-23)
+
+**Completed:** Phase 1 (MoE components) + Phase 2 (GPT-2 integration code, not yet verified with actual GPT-2 model)
+
+**Next:** Phase 2 verification with actual GPT-2 model, then Phase 3 (dataset preparation)
 
 ## Budget Constraint
 

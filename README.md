@@ -10,34 +10,45 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 
 ## Progress Log
 
-**MoE Components**
+### Phase 1: MoE Components [DONE]
 
-- [x] Router (load balancing, z-loss, noisy routing, STE for top-1)
-- [x] MoE Layer wrapper
-- [x] SwiGLU FFN (was thinking of using it, but since I'm using pretrained GPT-2 as base model, I'll use GELU)
+- [x] Router (NoisyTop-k, STE for top-1, noise annealing)
+- [x] Load balancing loss (Switch Transformer style)
+- [x] Z-loss (router logit stabilization)
+- [x] SwiGLU FFN reference impl (standalone, was thinking of using it but I'm using pretrained GPT-2 as base model, so I'll have to stick to GELU)
 
-**GPT-2 Integration**
+### Phase 2: GPT-2 Integration [IN PROGRESS]
 
-- [ ] Install MoE wrapper into pretrained GPT-2 (layers 8-11)
-- [ ] Warm-start experts via `deepcopy(original_mlp)`
+- [x] `MoEWrapper` — drop-in replacement for `GPT2MLP`
+- [x] `install_moe_layers()` — surgery function for layers 8-11
+- [x] Warm-start via `deepcopy(original_mlp)` + tiny noise
+- [x] `collect_aux_outputs()` — retrieves routing stats for loss computation
+- [x] Smoke tests pass (shape, gradient flow, losses) when running `gpt2_moe.py`
+- [ ] Full integration verification with actual GPT-2 model
 
-**Data & Training**
+### Phase 3: Dataset Preparation
 
-- [ ] Dataset preparation (code/math/prose with sequence packing)
-- [ ] Training loop with aux losses
+- [ ] Sequence packing (not padding)
+- [ ] Code/math/prose data collection
+- [ ] `PackedMixedDomainDataset` class
 
-**Experiments**
+### Phase 4: Training Infrastructure
 
+- [ ] Training loop with LM + LB + Z losses
+- [ ] Logging & checkpointing
 - [ ] Dense baseline run
-- [ ] MoE main run (8 experts, top-1, load balancing on)
+
+### Phase 5: Experiments
+
+- [ ] MoE main run (8 experts, top-1, LB on)
 - [ ] Ablation: no load balancing (expect collapse)
-- [ ] Ablation: top-2 routing (optional, budget permitting)
+- [ ] Ablation: top-2 routing (optional, if budget allows)
 
-**Analysis**
+### Phase 6: Analysis
 
-- [ ] Expert specialization heatmaps (experts × domains)
+- [ ] Expert specialization heatmaps
 - [ ] Router entropy over training
-- [ ] Fine-grained token-type routing (Python keywords vs identifiers, etc.)
+- [ ] Fine-grained token-type routing
 
 ## Code to Write
 
@@ -58,18 +69,19 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 
 **What I Need to Write**
 
-| Component           | Status | File          | Notes                                   |
-| ------------------- | ------ | ------------- | --------------------------------------- |
-| Router              | ✅     | `moe.py`      | With noisy routing, STE, load balancing |
-| MoE Layer           | ✅     | `moe.py`      | Dispatches tokens to experts            |
-| Load Balancing Loss | ✅     | `moe.py`      | Switch Transformer style                |
-| Z-Loss              | ✅     | `moe.py`      | Router logit stabilization              |
-| MoE Wrapper         | ✅     | `gpt2_moe.py` | Drop-in replacement for `GPT2MLP`       |
-| GPT-2 Surgery       | ✅     | `gpt2_moe.py` | `install_moe_layers()` function         |
-| Sequence Packing    | ⬜     | —             | Efficient dataset without padding       |
-| Training Loop       | ⬜     | —             | With aux loss collection                |
-| Collapse Detection  | ⬜     | —             | Early stopping for ablation             |
-| Visualization       | ⬜     | —             | Heatmaps, entropy plots                 |
+| Component           | Status | File          | Notes                                        |
+| ------------------- | ------ | ------------- | -------------------------------------------- |
+| Router              | ✅     | `moe.py`      | NoisyTop-k, STE for top-1, noise annealing   |
+| MoE Layer           | ✅     | `moe.py`      | Dispatches tokens to experts                 |
+| Load Balancing Loss | ✅     | `moe.py`      | Switch Transformer style (exported function) |
+| Z-Loss              | ✅     | `moe.py`      | Router logit stabilization (exported)        |
+| MoE Wrapper         | ✅     | `gpt2_moe.py` | Drop-in replacement for `GPT2MLP`            |
+| GPT-2 Surgery       | ✅     | `gpt2_moe.py` | `install_moe_layers()` function              |
+| Aux Collection      | ✅     | `gpt2_moe.py` | `collect_aux_outputs()` with clean probs     |
+| Sequence Packing    | ⬜     | `data.py`     | Efficient dataset without padding            |
+| Training Loop       | ⬜     | `train.py`    | With aux loss collection                     |
+| Collapse Detection  | ⬜     | —             | Early stopping for ablation                  |
+| Visualization       | ⬜     | —             | Heatmaps, entropy plots                      |
 
 ## Known Bottlenecks
 

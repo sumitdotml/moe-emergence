@@ -103,3 +103,27 @@ When writing the final report, pull from:
 - [Code Reviews](./code-reviews/)
 - [V3 Design Spec](./project-design/MOE-PROJECT-DESIGN-V3.md)
 - [Project README](../README.md)
+- [Agent Instructions](../AGENTS.md)
+
+---
+
+## Code Reviews Summary
+
+| #   | Date       | Component           | Status             |
+| --- | ---------- | ------------------- | ------------------ |
+| 001 | 2025-12-23 | `moe.py` review     | Fixed in `eea9294` |
+| 002 | 2025-12-23 | `moe.py` fix report | —                  |
+| 003 | 2025-12-23 | `gpt2_moe.py` gaps  | Fixed in `ffc77ab` |
+| 004 | 2025-12-23 | Loss dedup + tests  | Fixed in `c929d8c` |
+
+---
+
+## Project Status
+
+**Current Phase:** Phase 2 complete (GPT-2 integration code done)
+
+**Next Steps:**
+
+1. Verify GPT-2 integration with actual HuggingFace model
+2. Phase 3: Dataset preparation (sequence packing, data collection)
+3. Phase 4: Training infrastructure
