@@ -70,19 +70,21 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 
 **What I Need to Write**
 
-| Component           | Status | File          | Notes                                        |
-| ------------------- | ------ | ------------- | -------------------------------------------- |
-| Router              | ✅     | `moe.py`      | NoisyTop-k, STE for top-1, noise annealing   |
-| MoE Layer           | ✅     | `moe.py`      | Dispatches tokens to experts                 |
-| Load Balancing Loss | ✅     | `moe.py`      | Switch Transformer style (exported function) |
-| Z-Loss              | ✅     | `moe.py`      | Router logit stabilization (exported)        |
-| MoE Wrapper         | ✅     | `gpt2_moe.py` | Drop-in replacement for `GPT2MLP`            |
-| GPT-2 Surgery       | ✅     | `gpt2_moe.py` | `install_moe_layers()` function              |
-| Aux Collection      | ✅     | `gpt2_moe.py` | `collect_aux_outputs()` with clean probs     |
-| Sequence Packing    | ⬜     | `data.py`     | Efficient dataset without padding            |
-| Training Loop       | ⬜     | `train.py`    | With aux loss collection                     |
-| Collapse Detection  | ⬜     | —             | Early stopping for ablation                  |
-| Visualization       | ⬜     | —             | Heatmaps, entropy plots                      |
+| Component            | Status | File                         | Notes                                        |
+| -------------------- | ------ | ---------------------------- | -------------------------------------------- |
+| Router               | ✅     | `moe.py`                     | NoisyTop-k, STE for top-1, noise annealing   |
+| MoE Layer            | ✅     | `moe.py`                     | Dispatches tokens to experts                 |
+| Load Balancing Loss  | ✅     | `moe.py`                     | Switch Transformer style (exported function) |
+| Z-Loss               | ✅     | `moe.py`                     | Router logit stabilization (exported)        |
+| MoE Wrapper          | ✅     | `gpt2_moe.py`                | Drop-in replacement for `GPT2MLP`            |
+| GPT-2 Surgery        | ✅     | `gpt2_moe.py`                | `install_moe_layers()` function              |
+| Aux Collection       | ✅     | `gpt2_moe.py`                | `collect_aux_outputs()` with clean probs     |
+| Verification         | ✅     | `verify_gpt2_integration.py` | 10 comprehensive tests                       |
+| Inference Playground | ✅     | `gpt2_inference.py`          | Supports vanilla/MoE/checkpoints             |
+| Sequence Packing     | ⬜     | `data.py`                    | Efficient dataset without padding            |
+| Training Loop        | ⬜     | `train.py`                   | With aux loss collection                     |
+| Collapse Detection   | ⬜     | —                            | Early stopping for ablation                  |
+| Visualization        | ⬜     | —                            | Heatmaps, entropy plots                      |
 
 ## Known Bottlenecks
 
@@ -107,6 +109,40 @@ At my scale (8 experts, ~50M params each), this isn't a real bottleneck & everyt
 **Load Imbalance**
 
 Even with auxiliary load balancing loss, real-world data distributions can still cause some experts to be busier than others. The aux loss encourages balance but doesn't guarantee it. Capacity factors and token dropping are used in some implementations to hard-cap expert load. For this project, I'll yolo it with just the aux loss & not overengineer it.
+
+## Quick Start
+
+### Inference Playground
+
+Can play with GPT-2 generation (vanilla or MoE):
+
+```bash
+# vanilla GPT-2
+uv run python moe-emergence/gpt2_inference.py --prompt "Once upon a time"
+
+# untrained MoE (Phase 2)
+uv run python moe-emergence/gpt2_inference.py --moe --prompt "def fibonacci(n):"
+
+# trained MoE from checkpoint (Phase 5+) (btw this isn't ready yet since I haven't done MoE training yet, coming soon)
+uv run python moe-emergence/gpt2_inference.py \
+  --checkpoint checkpoints/run-002-step-10000.pt \
+  --prompt "Solve the equation x^2 + 5x + 6 = 0"
+
+# creative sampling
+uv run python moe-emergence/gpt2_inference.py \
+  --prompt "In a distant galaxy" \
+  --sample --temperature 0.9 --max-tokens 100
+```
+
+See `python moe-emergence/gpt2_inference.py --help` for all options.
+
+### Verification
+
+Run Phase 2 verification (10 comprehensive tests):
+
+```bash
+uv run python moe-emergence/verify_gpt2_integration.py
+```
 
 ## Code Formatting
 

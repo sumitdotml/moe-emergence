@@ -73,6 +73,8 @@ Report at the end with only a 1-3 sentence summary of what you changed
 ## Build, Test, and Development Commands
 
 - `uv sync`: Install dependencies from `uv.lock` (recommended local setup).
+- `uv run python moe-emergence/verify_gpt2_integration.py`: Run Phase 2 verification (10 comprehensive tests).
+- `uv run python moe-emergence/gpt2_inference.py --moe`: Interactive inference playground with routing stats.
 - `python moe-emergence/training_demo.py`: Run a small MoE training demo as a smoke test.
 - `ruff format moe-emergence/`: Auto-format code with Ruff.
 - `ruff check moe-emergence/`: Lint for style and correctness issues.
@@ -135,11 +137,24 @@ All issues from code reviews have been fixed:
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2025-12-23)
+## Current Status (2025-12-25)
 
-**Completed:** Phase 1 (MoE components) + Phase 2 (GPT-2 integration code, not yet verified with actual GPT-2 model)
+**Completed:**
 
-**Next:** Phase 2 verification with actual GPT-2 model, then Phase 3 (dataset preparation)
+- Phase 1 (MoE components) [DONE]
+- Phase 2 (GPT-2 integration) [DONE]
+  - Full integration verification: 10/10 tests passed
+  - See: `docs/experiments/run-001-gpt2-integration-verification.md`
+  - Commit: `a15683e`
+
+**Current Phase:** Ready for Phase 3 (Dataset Preparation)
+
+**Next Steps:**
+
+1. Implement sequence packing (no padding)
+2. Collect code/math/prose datasets
+3. Create `PackedMixedDomainDataset`
+4. Phase 4: Training infrastructure
 
 ## Budget Constraint
 
