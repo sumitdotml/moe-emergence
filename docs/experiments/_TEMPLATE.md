@@ -3,7 +3,11 @@
 **Run ID:** run-NNN
 **Date:** YYYY-MM-DD
 **Status:** Running | Completed | Failed | Aborted
+**Type:** Training | Verification | Evaluation
+**Phase:** 1 | 2 | 3 | 4 | 5 | 6
 **Commit:** `git-hash`
+**Command:** `...`
+**Script:** `path/to/script.py`
 
 ---
 

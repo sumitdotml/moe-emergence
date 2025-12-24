@@ -101,9 +101,14 @@ When writing the final report, pull from:
 ## Quick Links
 
 - [Code Reviews](./code-reviews/)
+- [Experiments](./experiments/)
 - [V3 Design Spec](./project-design/MOE-PROJECT-DESIGN-V3.md)
 - [Project README](../README.md)
 - [Agent Instructions](../AGENTS.md)
+
+## Experiment Logs
+
+- `docs/experiments/run-001-gpt2-integration-verification.md` (Phase 2 verification)
 
 ---
 
@@ -120,10 +125,12 @@ When writing the final report, pull from:
 
 ## Project Status
 
-**Current Phase:** Phase 2 complete (GPT-2 integration code done)
+**Current Phase:** Phase 2 COMPLETE (GPT-2 integration verified)
+
+**Last Verification:** run-001 (2025-12-25) - All 10 tests passed (merry christmas!)
 
 **Next Steps:**
 
-1. Verify GPT-2 integration with actual HuggingFace model
+1. ~~Verify GPT-2 integration with actual HuggingFace model~~ ✅ DONE
 2. Phase 3: Dataset preparation (sequence packing, data collection)
 3. Phase 4: Training infrastructure

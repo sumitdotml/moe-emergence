@@ -17,14 +17,15 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 - [x] Z-loss (router logit stabilization)
 - [x] SwiGLU FFN reference impl (standalone, was thinking of using it but I'm using pretrained GPT-2 as base model, so I'll have to stick to GELU)
 
-### Phase 2: GPT-2 Integration [IN PROGRESS]
+### Phase 2: GPT-2 Integration [DONE]
 
 - [x] `MoEWrapper` — drop-in replacement for `GPT2MLP`
 - [x] `install_moe_layers()` — surgery function for layers 8-11
 - [x] Warm-start via `deepcopy(original_mlp)` + tiny noise
 - [x] `collect_aux_outputs()` — retrieves routing stats for loss computation
 - [x] Smoke tests pass (shape, gradient flow, losses) when running `gpt2_moe.py`
-- [ ] Full integration verification with actual GPT-2 model
+- [x] Full integration verification with actual GPT-2 model (10/10 tests passed)
+  - See: `docs/experiments/run-001-gpt2-integration-verification.md`
 
 ### Phase 3: Dataset Preparation
 
