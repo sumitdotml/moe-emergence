@@ -97,7 +97,7 @@ Per GPT-5.2's assessment, the following are **not required for V3 spec** but may
 
 | Gap                     | Description                                    | Status                         |
 | ----------------------- | ---------------------------------------------- | ------------------------------ |
-| 2D input support        | Router assumes 3D input `[batch, seq, hidden]` | Skipped (3D matches HF flow)   |
+| 2D input support        | Router assumes 3D input `[batch, seq, hidden]` | Won't fix (see `docs/decisions/004-router-3d-only-input.md`) |
 | top-k > n_experts guard | No validation if `topk > n_experts`            | ✅ Fixed in `7ac4f87`          |
 | Faster expert batching  | Loop-based dispatch is O(n_experts)            | Optional (fine at small scale) |
 
@@ -114,4 +114,5 @@ Per GPT-5.2's assessment, the following are **not required for V3 spec** but may
 ## References
 
 - Previous review: `003-2025-12-23-gpt2-moe-fix.md`
+- Decision: `docs/decisions/004-router-3d-only-input.md`
 - V3 Design Doc: `project-design/MOE-PROJECT-DESIGN-V3.md`
