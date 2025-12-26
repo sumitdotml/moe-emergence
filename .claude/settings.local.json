@@ -5,7 +5,8 @@
       "Bash(ruff check:*)",
       "Bash(ruff format:*)",
       "Bash(uv run ruff:*)",
-      "Bash(uv run python:*)"
+      "Bash(uv run python:*)",
+      "WebSearch"
     ]
   }
 }
