@@ -29,9 +29,11 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 
 ### Phase 3: Dataset Preparation
 
-- [ ] Sequence packing (not padding)
+- [x] Sequence packing (not padding)
 - [ ] Code/math/prose data collection
-- [ ] `PackedMixedDomainDataset` class
+- [x] `PackedMixedDomainDataset` class
+  - See: `docs/decisions/005-phase3-data-sizing.md`
+  - Next action: run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512` and record token counts in `docs/DATA-PIPELINE.md`
 
 ### Phase 4: Training Infrastructure
 
@@ -81,7 +83,7 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 | Aux Collection       | ✅     | `gpt2_moe.py`                | `collect_aux_outputs()` with clean probs     |
 | Verification         | ✅     | `verify_gpt2_integration.py` | 10 comprehensive tests                       |
 | Inference Playground | ✅     | `gpt2_inference.py`          | Supports vanilla/MoE/checkpoints             |
-| Sequence Packing     | ⬜     | `data.py`                    | Efficient dataset without padding            |
+| Sequence Packing     | ✅     | `data.py`                    | Efficient dataset without padding            |
 | Training Loop        | ⬜     | `train.py`                   | With aux loss collection                     |
 | Collapse Detection   | ⬜     | —                            | Early stopping for ablation                  |
 | Visualization        | ⬜     | —                            | Heatmaps, entropy plots                      |

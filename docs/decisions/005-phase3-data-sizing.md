@@ -72,7 +72,7 @@ Choose **Option B**: Token-based reporting with optional balancing.
   - Slightly more output to parse (token counts, warnings)
 
 - **Risks:**
-  - Streaming + filtering may yield non-deterministic samples if upstream data changes; logging dataset revision IDs mitigates this
+  - Streaming + filtering may yield non-deterministic samples if upstream data changes; logging dataset versions/configs helps track drift
 
 ---
 
@@ -144,6 +144,6 @@ moe-emergence/data.py
 
 ## References
 
+- **Data pipeline spec**: `docs/DATA-PIPELINE.md`
 - Design spec: `docs/project-design/MOE-PROJECT-DESIGN-V3.md` (lines 922-1109)
-- Code review: `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
-- Opus 4.5 + GPT-5.2 discussion (this session)
+- Code review: `docs/code-reviews/005-2025-12-26-data-py-fix.md`

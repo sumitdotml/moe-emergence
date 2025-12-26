@@ -38,6 +38,7 @@ docs/
 ├── code-reviews/             # Code reviews with commit hashes
 ├── decisions/                # Why choices were made
 ├── experiments/              # Training run logs
+├── models-debate/            # Model discussion logs and critiques
 └── literature/               # Paper notes
 ```
 
@@ -111,7 +112,7 @@ Training a small MoE model on 3 domains (code, math, prose) to demonstrate exper
 
 ## Key Design Document
 
-**Read `project-design/MOE-PROJECT-DESIGN-V3.md` before making implementation changes.** This is the authoritative spec created through multi-model review.
+**Read `docs/project-design/MOE-PROJECT-DESIGN-V3.md` before making implementation changes.** This is the authoritative spec created through multi-model review.
 
 ## Architecture Decisions (Already Made)
 
@@ -137,7 +138,7 @@ All issues from code reviews have been fixed:
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2025-12-25)
+## Current Status (2025-12-26)
 
 **Completed:**
 
@@ -146,15 +147,18 @@ All issues from code reviews have been fixed:
   - Full integration verification: 10/10 tests passed
   - See: `docs/experiments/run-001-gpt2-integration-verification.md`
   - Commit: `a15683e`
+- Phase 3 (Dataset preparation) [IN PROGRESS]
+  - Sequence packing implemented
+  - `PackedMixedDomainDataset` implemented
+  - Data collection pending
 
-**Current Phase:** Ready for Phase 3 (Dataset Preparation)
+**Current Phase:** Phase 3 (Dataset Preparation)
 
-**Next Steps:**
+**Next Action:**
 
-1. Implement sequence packing (no padding)
-2. Collect code/math/prose datasets
-3. Create `PackedMixedDomainDataset`
-4. Phase 4: Training infrastructure
+1. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
+2. Record token counts/blocks in `docs/DATA-PIPELINE.md`
+3. Move to Phase 4 (training infrastructure)
 
 ## Budget Constraint
 

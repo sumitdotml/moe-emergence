@@ -16,6 +16,7 @@ docs/
 ├── code-reviews/             # Code review logs with findings
 ├── decisions/                # Decision log (why choices were made)
 ├── experiments/              # Experiment logs (runs, hyperparams, results)
+├── models-debate/            # Model discussion logs and critiques
 └── literature/               # Paper notes and references
 ```
 
@@ -100,11 +101,12 @@ When writing the final report, pull from:
 
 ## Quick Links
 
+- [Data Pipeline Spec](./DATA-PIPELINE.md)
+- [Data Pipeline Review Request](./models-debate/004-DATA-PIPELINE-REVIEW-REQUEST.md)
 - [Code Reviews](./code-reviews/)
 - [Experiments](./experiments/)
 - [V3 Design Spec](./project-design/MOE-PROJECT-DESIGN-V3.md)
 - [Project README](../README.md)
-- [Agent Instructions](../AGENTS.md)
 
 ## Experiment Logs
 
@@ -120,17 +122,18 @@ When writing the final report, pull from:
 | 002 | 2025-12-23 | `moe.py` fix report | —                  |
 | 003 | 2025-12-23 | `gpt2_moe.py` gaps  | Fixed in `ffc77ab` |
 | 004 | 2025-12-23 | Loss dedup + tests  | Fixed in `c929d8c` |
+| 005 | 2025-12-26 | `data.py` fix       | —                  |
 
 ---
 
 ## Project Status
 
-**Current Phase:** Phase 2 COMPLETE (GPT-2 integration verified)
+**Current Phase:** Phase 3 IN PROGRESS (Dataset preparation)
 
-**Last Verification:** run-001 (2025-12-25) - All 10 tests passed (merry christmas!)
+**Last Verification:** run-001 (2025-12-25) - All 10 tests passed
 
 **Next Steps:**
 
-1. ~~Verify GPT-2 integration with actual HuggingFace model~~ ✅ DONE
-2. Phase 3: Dataset preparation (sequence packing, data collection)
+1. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
+2. Record token counts/blocks in `docs/DATA-PIPELINE.md`
 3. Phase 4: Training infrastructure

@@ -1,0 +1,554 @@
+"""
+Dataset Preparation for MoE Training
+
+This module provides sequence packing and multi-domain dataset support for
+training MoE models on code, math, and prose data.
+
+Key features:
+- Sequence packing (no padding, efficient training)
+- Token-based sizing with imbalance warnings
+- Optional token balancing via truncation
+- Reproducible shuffling with seed control
+
+Usage:
+    # Quick test
+    uv run python moe-emergence/data.py --size-mb 1
+
+    # Full dataset with balancing
+    uv run python moe-emergence/data.py --size-mb 10 --balance-tokens
+
+See docs/decisions/005-phase3-data-sizing.md and `docs/DATA-PIPELINE.md` for design decisions.
+"""
+
+import argparse
+import random
+from typing import Optional
+
+import torch
+from torch.utils.data import Dataset
+from transformers import GPT2TokenizerFast
+
+
+def _dataset_meta(
+    dataset, dataset_name: str, split: str, config: Optional[str] = None
+) -> dict:
+    info = dataset.info
+    meta = {"dataset": dataset_name, "split": split}
+    if config:
+        meta["config"] = config
+    if info is not None:
+        if info.builder_name:
+            meta["builder_name"] = info.builder_name
+        if info.version is not None:
+            meta["version"] = str(info.version)
+    return meta
+
+
+def pack_sequences(
+    texts: list[str],
+    tokenizer: GPT2TokenizerFast,
+    block_size: int = 512,
+    domain_label: Optional[str] = None,
+) -> tuple[list[dict], int]:
+    """
+    Pack multiple texts into fixed-size blocks for efficient training.
+
+    Instead of padding each text to max_length (wasteful), we:
+    1. Tokenize all texts and concatenate with EOS separators
+    2. Chunk into fixed-size blocks
+    3. Each block may contain parts of multiple documents
+
+    This is standard practice for causal LM pretraining.
+
+    Args:
+        texts: List of text strings
+        tokenizer: GPT2TokenizerFast
+        block_size: Size of each training block (default 512)
+        domain_label: Domain label for all texts (e.g., 'code', 'math', 'prose')
+
+    Returns:
+        Tuple of (list of block dicts, total token count)
+        Each block dict has 'input_ids' (Tensor) and 'domain' (str)
+    """
+    all_tokens = []
+
+    for text in texts:
+        tokens = tokenizer.encode(text)
+        all_tokens.extend(tokens)
+        all_tokens.append(tokenizer.eos_token_id)
+
+    total_tokens = len(all_tokens)
+
+    blocks = []
+    for i in range(0, len(all_tokens) - block_size + 1, block_size):
+        block_tokens = all_tokens[i : i + block_size]
+        blocks.append(
+            {
+                "input_ids": torch.tensor(block_tokens, dtype=torch.long),
+                "domain": domain_label or "unknown",
+            }
+        )
+
+    return blocks, total_tokens
+
+
+def load_code_data(
+    max_size_mb: float = 10.0,
+    max_example_chars: int = 10000,
+    min_example_chars: int = 100,
+) -> tuple[list[str], dict]:
+    """
+    Load Python code samples from CodeParrot.
+
+    Args:
+        max_size_mb: Target size in MB (character-based approximation)
+        max_example_chars: Maximum characters per example
+        min_example_chars: Minimum characters per example
+
+    Returns:
+        Tuple of (list of code texts, dataset info dict)
+    """
+    from datasets import load_dataset
+
+    ds = load_dataset("codeparrot/codeparrot-clean", split="train", streaming=True)
+
+    texts = []
+    total_chars = 0
+    max_chars = int(max_size_mb * 1024 * 1024)
+
+    for sample in ds:
+        if total_chars >= max_chars:
+            break
+        text = sample["content"]
+        if min_example_chars < len(text) < max_example_chars:
+            texts.append(text)
+            total_chars += len(text)
+
+    info = _dataset_meta(ds, "codeparrot/codeparrot-clean", "train")
+    info.update(
+        {
+            "num_examples": len(texts),
+            "total_chars": total_chars,
+            "min_example_chars": min_example_chars,
+            "max_example_chars": max_example_chars,
+        }
+    )
+
+    return texts, info
+
+
+def load_math_data(
+    max_size_mb: float = 10.0,
+    max_example_chars: int = 10000,
+) -> tuple[list[str], dict]:
+    """
+    Load math problems from GSM8K and MATH datasets.
+
+    Format: "Problem: {problem}\n\nSolution: {solution}"
+
+    Args:
+        max_size_mb: Target size in MB (character-based approximation)
+        max_example_chars: Maximum characters per example
+
+    Returns:
+        Tuple of (list of math texts, dataset info dict)
+    """
+    from datasets import load_dataset
+
+    texts = []
+    total_chars = 0
+    max_chars = int(max_size_mb * 1024 * 1024)
+
+    # GSM8K loaded first
+    gsm8k = load_dataset("gsm8k", "main", split="train")
+    gsm8k_meta = _dataset_meta(gsm8k, "gsm8k", "train", "main")
+    gsm8k_count = 0
+
+    for sample in gsm8k:
+        if total_chars >= max_chars:
+            break
+        text = f"Problem: {sample['question']}\n\nSolution: {sample['answer']}"
+        if len(text) < max_example_chars:
+            texts.append(text)
+            total_chars += len(text)
+            gsm8k_count += 1
+
+    # adding MATH dataset if we haven't reached the target size yet
+    math_count = 0
+    math_meta = None
+    if total_chars < max_chars:
+        math_ds = load_dataset(
+            "hendrycks/competition_math", split="train", trust_remote_code=True
+        )
+        math_meta = _dataset_meta(math_ds, "hendrycks/competition_math", "train")
+        for sample in math_ds:
+            if total_chars >= max_chars:
+                break
+            text = f"Problem: {sample['problem']}\n\nSolution: {sample['solution']}"
+            if len(text) < max_example_chars:
+                texts.append(text)
+                total_chars += len(text)
+                math_count += 1
+
+    datasets_meta = [gsm8k_meta]
+    if math_meta is not None:
+        datasets_meta.append(math_meta)
+    info = {
+        "datasets": datasets_meta,
+        "num_examples": len(texts),
+        "gsm8k_count": gsm8k_count,
+        "math_count": math_count,
+        "total_chars": total_chars,
+        "max_example_chars": max_example_chars,
+    }
+
+    return texts, info
+
+
+def load_prose_data(
+    max_size_mb: float = 10.0,
+    max_example_chars: int = 10000,
+    min_example_chars: int = 200,
+) -> tuple[list[str], dict]:
+    """
+    Load prose text from WikiText-103.
+
+    Args:
+        max_size_mb: Target size in MB (character-based approximation)
+        max_example_chars: Maximum characters per example
+        min_example_chars: Minimum characters per example
+
+    Returns:
+        Tuple of (list of prose texts, dataset info dict)
+    """
+    from datasets import load_dataset
+
+    # WikiText-103 is a good alternative to OpenWebText
+    ds = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="train")
+
+    texts = []
+    total_chars = 0
+    max_chars = int(max_size_mb * 1024 * 1024)
+
+    for sample in ds:
+        if total_chars >= max_chars:
+            break
+        text = sample["text"]
+        # skipping empty lines and very short texts
+        if text and min_example_chars < len(text) < max_example_chars:
+            texts.append(text)
+            total_chars += len(text)
+
+    info = _dataset_meta(ds, "Salesforce/wikitext", "train", "wikitext-103-raw-v1")
+    info.update(
+        {
+            "num_examples": len(texts),
+            "total_chars": total_chars,
+            "min_example_chars": min_example_chars,
+            "max_example_chars": max_example_chars,
+        }
+    )
+
+    return texts, info
+
+
+class PackedMixedDomainDataset(Dataset):
+    """
+    Dataset combining packed sequences from multiple domains.
+
+    Maintains domain labels at block level for post-hoc analysis,
+    but all blocks are shuffled together for training.
+
+    Args:
+        code_texts: List of code text samples
+        math_texts: List of math text samples
+        prose_texts: List of prose text samples
+        tokenizer: GPT2TokenizerFast
+        block_size: Tokens per block (default 512)
+        balance_tokens: If True, truncate larger domains to match smallest
+        seed: Random seed for reproducible shuffling
+    """
+
+    def __init__(
+        self,
+        code_texts: list[str],
+        math_texts: list[str],
+        prose_texts: list[str],
+        tokenizer: GPT2TokenizerFast,
+        block_size: int = 512,
+        balance_tokens: bool = False,
+        seed: int = 42,
+    ) -> None:
+        self.block_size = block_size
+
+        # packing each domain separately
+        print("Packing code sequences...")
+        code_blocks, code_tokens = pack_sequences(
+            code_texts, tokenizer, block_size, "code"
+        )
+
+        print("Packing math sequences...")
+        math_blocks, math_tokens = pack_sequences(
+            math_texts, tokenizer, block_size, "math"
+        )
+
+        print("Packing prose sequences...")
+        prose_blocks, prose_tokens = pack_sequences(
+            prose_texts, tokenizer, block_size, "prose"
+        )
+
+        # storing token counts for reporting
+        self.token_counts = {
+            "code": code_tokens,
+            "math": math_tokens,
+            "prose": prose_tokens,
+        }
+
+        self.block_counts = {
+            "code": len(code_blocks),
+            "math": len(math_blocks),
+            "prose": len(prose_blocks),
+        }
+
+        # checking for imbalance
+        counts = list(self.token_counts.values())
+        min_tokens = min(counts)
+        max_tokens = max(counts)
+
+        if max_tokens > 1.5 * min_tokens:
+            min_domain = min(self.token_counts, key=self.token_counts.get)
+            print(
+                f"\nWarning: Token imbalance detected (>1.5x ratio)!"
+                f"\n  Smallest: {min_domain} with {min_tokens:,} tokens"
+                f"\n  Largest has {max_tokens:,} tokens"
+            )
+            if not balance_tokens:
+                print("  Use --balance-tokens to truncate to smallest domain.\n")
+
+        # optional: balance by truncating to smallest domain
+        if balance_tokens:
+            min_blocks = min(len(code_blocks), len(math_blocks), len(prose_blocks))
+            code_blocks = code_blocks[:min_blocks]
+            math_blocks = math_blocks[:min_blocks]
+            prose_blocks = prose_blocks[:min_blocks]
+
+            total_blocks = min_blocks * 3
+            total_tokens = min_blocks * block_size * 3
+            print(
+                f"\nBalanced to {min_blocks} blocks per domain "
+                f"({total_blocks} total, ~{total_tokens:,} tokens)"
+            )
+
+            # updating counts after balancing
+            self.block_counts = {
+                "code": min_blocks,
+                "math": min_blocks,
+                "prose": min_blocks,
+            }
+            self.token_counts = {
+                "code": min_blocks * block_size,
+                "math": min_blocks * block_size,
+                "prose": min_blocks * block_size,
+            }
+
+        # combining and shuffling
+        self.blocks = code_blocks + math_blocks + prose_blocks
+        random.seed(seed)
+        random.shuffle(self.blocks)
+
+        # reporting final stats
+        print("\nDataset ready:")
+        print(f"  Total blocks: {len(self.blocks)}")
+        print(f"  Block size: {block_size} tokens")
+        print(
+            f"  Code: {self.block_counts['code']} blocks "
+            f"({self.token_counts['code']:,} tokens)"
+        )
+        print(
+            f"  Math: {self.block_counts['math']} blocks "
+            f"({self.token_counts['math']:,} tokens)"
+        )
+        print(
+            f"  Prose: {self.block_counts['prose']} blocks "
+            f"({self.token_counts['prose']:,} tokens)"
+        )
+
+    def __len__(self) -> int:
+        return len(self.blocks)
+
+    def __getitem__(self, idx: int) -> dict:
+        block = self.blocks[idx]
+        return {"input_ids": block["input_ids"], "domain": block["domain"]}
+
+
+def collate_packed(batch: list[dict]) -> dict:
+    """
+    Collate function for packed sequences.
+
+    No padding needed since all blocks are the same size.
+
+    Args:
+        batch: List of dicts with 'input_ids' and 'domain'
+
+    Returns:
+        Dict with stacked 'input_ids' tensor and 'domains' list
+    """
+    return {
+        "input_ids": torch.stack([item["input_ids"] for item in batch]),
+        "domains": [item["domain"] for item in batch],
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Prepare packed dataset for MoE training"
+    )
+    parser.add_argument(
+        "--size-mb",
+        type=float,
+        default=10.0,
+        help="Target size per domain in MB (default: 10)",
+    )
+    parser.add_argument(
+        "--block-size",
+        type=int,
+        default=512,
+        help="Tokens per block (default: 512)",
+    )
+    parser.add_argument(
+        "--balance-tokens",
+        action="store_true",
+        help="Truncate larger domains to match smallest",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for shuffle (default: 42)",
+    )
+    parser.add_argument(
+        "--max-example-chars",
+        type=int,
+        default=10000,
+        help="Per-example length cap (default: 10000)",
+    )
+    args = parser.parse_args()
+
+    print("Loading tokenizer...")
+    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+
+    print(f"\n{'=' * 60}")
+    print(f"Loading datasets (target: {args.size_mb}MB per domain)")
+    print(f"{'=' * 60}\n")
+
+    # loading all domains
+    print("Loading code data...")
+    code_texts, code_info = load_code_data(
+        max_size_mb=args.size_mb,
+        max_example_chars=args.max_example_chars,
+    )
+    print(
+        f"  Loaded {code_info['num_examples']} examples "
+        f"({code_info['total_chars']:,} chars)"
+    )
+
+    print("\nLoading math data...")
+    math_texts, math_info = load_math_data(
+        max_size_mb=args.size_mb,
+        max_example_chars=args.max_example_chars,
+    )
+    print(
+        f"  Loaded {math_info['num_examples']} examples "
+        f"({math_info['total_chars']:,} chars)"
+    )
+    print(f"    GSM8K: {math_info['gsm8k_count']}, MATH: {math_info['math_count']}")
+
+    print("\nLoading prose data...")
+    prose_texts, prose_info = load_prose_data(
+        max_size_mb=args.size_mb,
+        max_example_chars=args.max_example_chars,
+    )
+    print(
+        f"  Loaded {prose_info['num_examples']} examples "
+        f"({prose_info['total_chars']:,} chars)"
+    )
+
+    print(f"\n{'=' * 60}")
+    print("Creating packed dataset")
+    print(f"{'=' * 60}\n")
+
+    dataset = PackedMixedDomainDataset(
+        code_texts=code_texts,
+        math_texts=math_texts,
+        prose_texts=prose_texts,
+        tokenizer=tokenizer,
+        block_size=args.block_size,
+        balance_tokens=args.balance_tokens,
+        seed=args.seed,
+    )
+
+    # verification
+    print(f"\n{'=' * 60}")
+    print("Verification")
+    print(f"{'=' * 60}\n")
+
+    # checking block sizes
+    sample = dataset[0]
+    assert sample["input_ids"].shape == (args.block_size,), (
+        f"Block size mismatch: {sample['input_ids'].shape} != ({args.block_size},)"
+    )
+    print(f"[OK] Block size: {args.block_size} tokens")
+
+    # checking no padding tokens
+    pad_token_id = tokenizer.pad_token_id
+    if pad_token_id is None:
+        print("[OK] Pad token id is None; skipping pad-token check")
+    else:
+        has_padding = any(
+            (dataset[i]["input_ids"] == pad_token_id).any()
+            for i in range(min(100, len(dataset)))
+        )
+        assert not has_padding, "Found padding tokens in dataset!"
+        print("[OK] No padding tokens")
+
+    # checking domain distribution
+    domain_counts = {"code": 0, "math": 0, "prose": 0}
+    for i in range(len(dataset)):
+        domain_counts[dataset[i]["domain"]] += 1
+
+    print(
+        "[OK] Domain distribution: "
+        f"code={domain_counts['code']}, "
+        f"math={domain_counts['math']}, "
+        f"prose={domain_counts['prose']}"
+    )
+
+    # testing collate function
+    from torch.utils.data import DataLoader
+
+    loader = DataLoader(dataset, batch_size=4, collate_fn=collate_packed)
+    batch = next(iter(loader))
+    assert batch["input_ids"].shape == (4, args.block_size), (
+        f"Batch shape mismatch: {batch['input_ids'].shape}"
+    )
+    assert len(batch["domains"]) == 4
+    print("[OK] Collate function works")
+
+    print(f"\n{'=' * 60}")
+    print("Dataset info (for reproducibility)")
+    print(f"{'=' * 60}\n")
+
+    print(f"Code: {code_info}")
+    print(f"Math: {math_info}")
+    print(f"Prose: {prose_info}")
+    print(f"\nSeed: {args.seed}")
+    print(f"Block size: {args.block_size}")
+    print(f"Balance tokens: {args.balance_tokens}")
+
+    print("\n[OK] Dataset ready for training.")
+    print(f"   Total blocks: {len(dataset)}")
+    print(f"   Estimated steps (batch=8, 1 epoch): {len(dataset) // 8}")
+
+
+if __name__ == "__main__":
+    main()

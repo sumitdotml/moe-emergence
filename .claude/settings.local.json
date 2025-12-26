@@ -4,7 +4,8 @@
       "Bash(git rev-parse:*)",
       "Bash(ruff check:*)",
       "Bash(ruff format:*)",
-      "Bash(uv run ruff:*)"
+      "Bash(uv run ruff:*)",
+      "Bash(uv run python:*)"
     ]
   }
 }
