@@ -5,7 +5,7 @@ repos:
       # linter
       - id: ruff-check
         types_or: [python, pyi]
-        args: [--fix]
+        args: [--fix, --exclude, notebooks/**]
       # formatter
       - id: ruff-format
         types_or: [python, pyi]

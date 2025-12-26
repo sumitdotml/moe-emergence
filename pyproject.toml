@@ -19,6 +19,30 @@ dev = [
 
 [tool.ruff]
 line-length = 88
+extend-exclude = ["notebooks/**"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-third-party = [
+    "datasets",
+    "numpy",
+    "torch",
+    "transformers",
+]
+known-first-party = [
+    "data",
+    "ffn",
+    "gpt2_inference",
+    "gpt2_moe",
+    "moe",
+    "training_demo",
+    "verify_gpt2_integration",
+]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+combine-as-imports = true
+force-sort-within-sections = true
 
 [tool.ruff.format]
 docstring-code-format = true

@@ -13,10 +13,12 @@ Usage:
 """
 
 import copy
+from typing import NamedTuple, Optional
+
 import torch
-import torch.nn as nn
 from torch import Tensor
-from typing import Optional, NamedTuple
+import torch.nn as nn
+
 from moe import Router, compute_load_balance_loss, compute_z_loss
 
 

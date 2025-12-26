@@ -25,12 +25,13 @@ from __future__ import annotations
 
 import torch
 from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+
 from gpt2_moe import (
     MoEWrapper,
-    install_moe_layers,
     collect_aux_outputs,
     compute_load_balance_loss,
     compute_z_loss,
+    install_moe_layers,
 )
 
 

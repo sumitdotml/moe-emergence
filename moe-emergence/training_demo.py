@@ -12,6 +12,7 @@ This file demonstrates how to train an MoE layer with all components:
 
 import torch
 import torch.nn as nn
+
 from moe import MoE
 
 

@@ -19,10 +19,12 @@ I simply decided to leave this file (alongside ffn.py) as a standalone reference
 implementation for future reference since SWiGLU FFN is the more "modern" choice for MoE.
 """
 
+from typing import NamedTuple, Optional
+
 import torch
-import torch.nn as nn
 from torch import Tensor
-from typing import Optional, NamedTuple
+import torch.nn as nn
+
 from ffn import SwiGLU as Expert
 
 
