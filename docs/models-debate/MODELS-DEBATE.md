@@ -115,3 +115,9 @@ Key Files to Read
 - AGENTS.md - Workflow instructions and project context
 
 ---
+
+Data Pipeline Critical Reviews (Phase 3)
+
+- Opus-4-5: `docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md`
+- GPT-5-2: `docs/models-debate/005b-DATA-PIPELINE-CRITICAL-REVIEW-GPT-5-2.md`
+- Gemini-3: `docs/models-debate/005c-DATA-PIPELINE-CRITICAL-REVIEW-GEMINI-3.md`

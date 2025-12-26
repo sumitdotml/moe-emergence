@@ -156,9 +156,10 @@ All issues from code reviews have been fixed:
 
 **Next Action:**
 
-1. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
-2. Record token counts/blocks in `docs/DATA-PIPELINE.md`
-3. Move to Phase 4 (training infrastructure)
+1. Create `/doc-decision` entries for the finalized data-pipeline decisions (include commit hash)
+2. Update `moe-emergence/data.py` (shuffle buffer + seed, text-level split, prefix randomization, math subdomain labels, logging)
+3. Update `docs/DATA-PIPELINE.md` with the new behavior and size_mb pre-split semantics
+4. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512` and record counts in `docs/DATA-PIPELINE.md`
 
 ## Budget Constraint
 

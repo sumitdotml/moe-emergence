@@ -103,6 +103,7 @@ When writing the final report, pull from:
 
 - [Data Pipeline Spec](./DATA-PIPELINE.md)
 - [Data Pipeline Review Request](./models-debate/004-DATA-PIPELINE-REVIEW-REQUEST.md)
+- Data Pipeline Critical Reviews: [Opus-4-5](./models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md), [GPT-5-2](./models-debate/005b-DATA-PIPELINE-CRITICAL-REVIEW-GPT-5-2.md), [Gemini-3](./models-debate/005c-DATA-PIPELINE-CRITICAL-REVIEW-GEMINI-3.md)
 - [Code Reviews](./code-reviews/)
 - [Experiments](./experiments/)
 - [V3 Design Spec](./project-design/MOE-PROJECT-DESIGN-V3.md)

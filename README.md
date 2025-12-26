@@ -33,7 +33,11 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 - [ ] Code/math/prose data collection
 - [x] `PackedMixedDomainDataset` class
   - See: `docs/decisions/005-phase3-data-sizing.md`
-  - Next action: run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512` and record token counts in `docs/DATA-PIPELINE.md`
+  - Next steps:
+    - Create `/doc-decision` entries for the finalized data-pipeline decisions (include commit hash)
+    - Update `moe-emergence/data.py` (shuffle buffer + seed, text-level split, prefix randomization, math subdomain labels, logging)
+    - Update `docs/DATA-PIPELINE.md` with new behavior and size_mb pre-split semantics
+    - Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512` and record counts in `docs/DATA-PIPELINE.md`
 
 ### Phase 4: Training Infrastructure
 
