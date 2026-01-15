@@ -262,6 +262,7 @@ def main():
 
     print(
         """
+(assuming if done correctly)
 WHAT HAPPENED DURING TRAINING:
 ──────────────────────────────
 
