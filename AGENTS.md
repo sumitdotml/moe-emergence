@@ -138,7 +138,7 @@ All issues from code reviews have been fixed:
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2025-12-26)
+## Current Status (2025-01-21)
 
 **Completed:**
 
@@ -150,16 +150,39 @@ All issues from code reviews have been fixed:
 - Phase 3 (Dataset preparation) [IN PROGRESS]
   - Sequence packing implemented
   - `PackedMixedDomainDataset` implemented
-  - Data collection pending
+  - Multi-model debate completed (11 passes, see `docs/models-debate/005*.md`)
+  - **5 critical data hygiene issues identified and fixes locked**
 
-**Current Phase:** Phase 3 (Dataset Preparation)
+**Current Phase:** Phase 3 (Dataset Preparation) — Data Hygiene Fixes
+
+**Blockers (No Training Until Resolved):**
+
+The multi-model debate (Opus 4.5 + GPT-5.2 + Gemini 3) identified 5 experiment-invalidating issues. These are now locked decisions:
+
+| Issue                     | Fix                                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| CodeParrot streaming bias | `ds.shuffle(buffer_size=max(1000, size_mb*200), seed=seed)`                                                             |
+| Math prefix leakage       | Randomize both from `["Problem:", "Question:", "Given:"]` + `["Solution:", "Answer:", "Therefore:"]` (no empty strings) |
+| Train/eval leakage        | Split at TEXT level BEFORE packing                                                                                      |
+| No validation split       | `min(max(10, int(n_texts*0.05)), int(n_texts*0.10))` texts as holdout                                                   |
+| Subdomain provenance loss | Add `subdomain` field: `"gsm8k"` or `"competition_math"`                                                                |
 
 **Next Action:**
 
-1. Create `/doc-decision` entries for the finalized data-pipeline decisions (include commit hash)
-2. Update `moe-emergence/data.py` (shuffle buffer + seed, text-level split, prefix randomization, math subdomain labels, logging)
-3. Update `docs/DATA-PIPELINE.md` with the new behavior and size_mb pre-split semantics
-4. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512` and record counts in `docs/DATA-PIPELINE.md`
+1. Create `/doc-decision` entries for the 4 locked decisions (streaming, prefixes, validation, subdomain)
+2. Update `moe-emergence/data.py`:
+   - Add shuffle buffer with seed for CodeParrot
+   - Randomize both math prefixes (problem AND solution)
+   - Split texts BEFORE packing (not blocks after)
+   - Pack train/eval separately per domain
+   - Add `subdomain` field for math
+   - Log buffer_size, holdout text/block counts, seed
+3. Update `docs/DATA-PIPELINE.md`:
+   - Document text-level split strategy
+   - Clarify `--size-mb` is total (train+eval pre-split)
+   - Note WikiText-103 = "encyclopedic prose" limitation
+4. Run verification: `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
+5. Confirm no train/eval leakage, record counts in `docs/DATA-PIPELINE.md`
 
 ## Budget Constraint
 
