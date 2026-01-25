@@ -138,7 +138,7 @@ All issues from code reviews have been fixed:
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2025-01-21)
+## Current Status (2025-01-25)
 
 **Completed:**
 
@@ -151,38 +151,48 @@ All issues from code reviews have been fixed:
   - Sequence packing implemented
   - `PackedMixedDomainDataset` implemented
   - Multi-model debate completed (11 passes, see `docs/models-debate/005*.md`)
-  - **5 critical data hygiene issues identified and fixes locked**
+  - **Critical analysis completed** — see `docs/DATA-PIPELINE-CRITICAL-ANALYSIS.md`
 
-**Current Phase:** Phase 3 (Dataset Preparation) — Data Hygiene Fixes
+**Current Phase:** Phase 3 (Dataset Preparation) — Data Pipeline Fixes
+
+**Critical Discovery:**
+
+The `hendrycks/competition_math` dataset has a **DMCA takedown** and is NOT accessible. The current `data.py` will fail.
 
 **Blockers (No Training Until Resolved):**
 
-The multi-model debate (Opus 4.5 + GPT-5.2 + Gemini 3) identified 5 experiment-invalidating issues. These are now locked decisions:
+| Issue | Severity | Status |
+| ----- | -------- | ------ |
+| Train/eval leakage | **HIGH** | Needs fix: split at TEXT level BEFORE packing |
+| Math dataset DMCA'd | **HIGH** | Replacing with `allenai/math_qa` |
+| Code/Prose dataset choice | MEDIUM | Run sample test to verify quality |
 
-| Issue                     | Fix                                                                                                                     |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| CodeParrot streaming bias | `ds.shuffle(buffer_size=max(1000, size_mb*200), seed=seed)`                                                             |
-| Math prefix leakage       | Randomize both from `["Problem:", "Question:", "Given:"]` + `["Solution:", "Answer:", "Therefore:"]` (no empty strings) |
-| Train/eval leakage        | Split at TEXT level BEFORE packing                                                                                      |
-| No validation split       | `min(max(10, int(n_texts*0.05)), int(n_texts*0.10))` texts as holdout                                                   |
-| Subdomain provenance loss | Add `subdomain` field: `"gsm8k"` or `"competition_math"`                                                                |
+**Verified Decisions:**
 
-**Next Action:**
+| Decision | Choice | Notes |
+| -------- | ------ | ----- |
+| Math dataset | `allenai/math_qa` | 29K examples, ~12MB, Apache 2.0, pure natural language |
 
-1. Create `/doc-decision` entries for the 4 locked decisions (streaming, prefixes, validation, subdomain)
-2. Update `moe-emergence/data.py`:
-   - Add shuffle buffer with seed for CodeParrot
-   - Randomize both math prefixes (problem AND solution)
-   - Split texts BEFORE packing (not blocks after)
-   - Pack train/eval separately per domain
-   - Add `subdomain` field for math
-   - Log buffer_size, holdout text/block counts, seed
-3. Update `docs/DATA-PIPELINE.md`:
-   - Document text-level split strategy
-   - Clarify `--size-mb` is total (train+eval pre-split)
-   - Note WikiText-103 = "encyclopedic prose" limitation
-4. Run verification: `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
-5. Confirm no train/eval leakage, record counts in `docs/DATA-PIPELINE.md`
+**Pending Investigation:**
+
+These items require verification before implementation. Do not assume they are correct.
+
+| Item | What Needs Investigation | Status |
+| ---- | ------------------------ | ------ |
+| MathQA formatting | How to format `Problem` and `Rationale` fields? Use prefixes? Which ones? Is prefix concern even relevant? | **TODO** |
+| Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **TODO** |
+| Shuffle buffer formula | Is `max(1000, size_mb*200)` justified? Where did this come from? | **TODO** |
+| Code dataset | CodeParrot-clean vs StarCoderData — verify samples | **TODO** |
+| Prose dataset | WikiText-103 vs OpenWebText — verify samples | **TODO** |
+
+**Next Actions:**
+
+1. Investigate MathQA format — examine actual samples, decide on formatting approach
+2. Verify train/eval split rationale — is the formula appropriate for our data sizes?
+3. Verify shuffle buffer rationale — is this heuristic justified?
+4. Run `uv run python sample_test.py` to inspect code/prose dataset samples
+5. After all investigations complete, update `moe-emergence/data.py`
+6. Run verification and confirm no train/eval leakage
 
 ## Budget Constraint
 
