@@ -21,12 +21,17 @@ See docs/decisions/005-phase3-data-sizing.md and `docs/DATA-PIPELINE.md` for des
 """
 
 import argparse
+from pathlib import Path
 import random
 from typing import Optional
 
 import torch
 from torch.utils.data import Dataset
 from transformers import GPT2TokenizerFast
+
+# all data cached in .cache/ at repository root
+REPO_ROOT = Path(__file__).parent.parent
+CACHE_DIR = REPO_ROOT / ".cache"
 
 
 def _dataset_meta(
@@ -110,7 +115,13 @@ def load_code_data(
     """
     from datasets import load_dataset
 
-    ds = load_dataset("codeparrot/codeparrot-clean", split="train", streaming=True)
+    hf_cache = CACHE_DIR / "huggingface"
+    ds = load_dataset(
+        "codeparrot/codeparrot-clean",
+        split="train",
+        streaming=True,
+        cache_dir=str(hf_cache),
+    )
 
     texts = []
     total_chars = 0
@@ -137,14 +148,74 @@ def load_code_data(
     return texts, info
 
 
+def _download_mathqa() -> list[dict]:
+    """
+    Download MathQA dataset from the official source and cache locally.
+
+    The HuggingFace loader for allenai/math_qa uses a deprecated script format,
+    so we download directly from the source ZIP file.
+
+    Returns:
+        List of dicts with 'Problem' and 'Rationale' keys (and other fields)
+
+    Example sample::
+
+        {
+            "Problem": "the banker's gain of a certain sum due 3 years hence
+                        at 10% per annum is rs. 36. what is the present worth?",
+            "Rationale": "explanation: t = 3 years r = 10% td = (bg × 100) / tr
+                          = (36 × 100) / (3 × 10) = 12 × 10 = rs. 120 ...
+                          answer: option a",
+            "options": "a) rs. 400, b) rs. 300, c) rs. 500, ...",
+            "correct": "a",
+            "category": "gain"
+        }
+
+    Note: Rationales contain Unicode math symbols (×, ⇒, ⋅) mixed with ASCII.
+    See docs/decisions/007-math-prefix-randomization.md for details.
+    """
+    import io
+    import json
+    import urllib.request
+    import zipfile
+
+    cache_dir = CACHE_DIR / "mathqa"
+    cache_file = cache_dir / "train.json"
+
+    if cache_file.exists():
+        with open(cache_file) as f:
+            return json.load(f)
+
+    url = "https://math-qa.github.io/math-QA/data/MathQA.zip"
+    print(f"  Downloading MathQA from {url}...")
+
+    with urllib.request.urlopen(url) as response:
+        zip_bytes = response.read()
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+        with archive.open("train.json") as f:
+            data = json.load(f)
+
+    # caching for future runs
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with open(cache_file, "w") as f:
+        json.dump(data, f)
+
+    print(f"  Cached to {cache_file}")
+    return data
+
+
 def load_math_data(
     max_size_mb: float = 10.0,
     max_example_chars: int = 10000,
 ) -> tuple[list[str], dict]:
     """
-    Load math problems from GSM8K and MATH datasets.
+    Load math problems from MathQA (allenai).
 
-    Format: "Problem: {problem}\n\nSolution: {solution}"
+    Format: "{Problem}\n\n{Rationale}" (no prefixes - see decision 007)
+
+    The math content is naturally distinguishable through numbers, operators,
+    step-by-step calculations, and mathematical vocabulary.
 
     Args:
         max_size_mb: Target size in MB (character-based approximation)
@@ -153,51 +224,29 @@ def load_math_data(
     Returns:
         Tuple of (list of math texts, dataset info dict)
     """
-    from datasets import load_dataset
+    mathqa_samples = _download_mathqa()
 
     texts = []
     total_chars = 0
     max_chars = int(max_size_mb * 1024 * 1024)
 
-    # GSM8K loaded first
-    gsm8k = load_dataset("gsm8k", "main", split="train")
-    gsm8k_meta = _dataset_meta(gsm8k, "gsm8k", "train", "main")
-    gsm8k_count = 0
-
-    for sample in gsm8k:
+    for sample in mathqa_samples:
         if total_chars >= max_chars:
             break
-        text = f"Problem: {sample['question']}\n\nSolution: {sample['answer']}"
+
+        # Format: problem text, blank line, rationale
+        # No prefixes - content naturally signals "math" domain
+        text = f"{sample['Problem']}\n\n{sample['Rationale']}"
+
         if len(text) < max_example_chars:
             texts.append(text)
             total_chars += len(text)
-            gsm8k_count += 1
 
-    # adding MATH dataset if we haven't reached the target size yet
-    math_count = 0
-    math_meta = None
-    if total_chars < max_chars:
-        math_ds = load_dataset(
-            "hendrycks/competition_math", split="train", trust_remote_code=True
-        )
-        math_meta = _dataset_meta(math_ds, "hendrycks/competition_math", "train")
-        for sample in math_ds:
-            if total_chars >= max_chars:
-                break
-            text = f"Problem: {sample['problem']}\n\nSolution: {sample['solution']}"
-            if len(text) < max_example_chars:
-                texts.append(text)
-                total_chars += len(text)
-                math_count += 1
-
-    datasets_meta = [gsm8k_meta]
-    if math_meta is not None:
-        datasets_meta.append(math_meta)
     info = {
-        "datasets": datasets_meta,
+        "dataset": "MathQA (allenai)",
+        "source_url": "https://math-qa.github.io/math-QA/data/MathQA.zip",
+        "total_available": len(mathqa_samples),
         "num_examples": len(texts),
-        "gsm8k_count": gsm8k_count,
-        "math_count": math_count,
         "total_chars": total_chars,
         "max_example_chars": max_example_chars,
     }
@@ -223,8 +272,13 @@ def load_prose_data(
     """
     from datasets import load_dataset
 
-    # WikiText-103 is a good alternative to OpenWebText
-    ds = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="train")
+    hf_cache = CACHE_DIR / "huggingface"
+    ds = load_dataset(
+        "Salesforce/wikitext",
+        "wikitext-103-raw-v1",
+        split="train",
+        cache_dir=str(hf_cache),
+    )
 
     texts = []
     total_chars = 0
@@ -435,7 +489,8 @@ def main():
     args = parser.parse_args()
 
     print("Loading tokenizer...")
-    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+    hf_cache = CACHE_DIR / "huggingface"
+    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2", cache_dir=str(hf_cache))
 
     print(f"\n{'=' * 60}")
     print(f"Loading datasets (target: {args.size_mb}MB per domain)")
@@ -459,9 +514,8 @@ def main():
     )
     print(
         f"  Loaded {math_info['num_examples']} examples "
-        f"({math_info['total_chars']:,} chars)"
+        f"({math_info['total_chars']:,} chars) from MathQA"
     )
-    print(f"    GSM8K: {math_info['gsm8k_count']}, MATH: {math_info['math_count']}")
 
     print("\nLoading prose data...")
     prose_texts, prose_info = load_prose_data(
