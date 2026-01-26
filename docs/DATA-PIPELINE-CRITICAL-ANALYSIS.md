@@ -70,32 +70,21 @@ NOT the claim: "Experts generalize to all Python code everywhere."
 
 **GPT-5.2's claim**: Router learns to route on `Problem:` token instead of math content. "Cheat emergence."
 
-**Important context**: This concern was raised for the original GSM8K + hendrycks/competition_math datasets, which used fixed "Problem:" and "Solution:" formatting. I am now using MathQA, which has different fields (`Problem`, `Rationale`).
+**Status**: **RESOLVED** — No prefixes for MathQA. See decision 007 (revised).
 
-**Status**: **NEEDS RE-EVALUATION** for MathQA specifically.
+**Resolution summary**:
 
-**Questions to investigate**:
-1. What is the natural format of MathQA samples?
-2. Should prefixes be added at all?
-3. If prefixes are used, does the concern about routing shortcuts apply?
-4. What formatting would make math content most distinguishable from code/prose?
+After examining 30+ MathQA samples, the decision is to use NO prefixes:
+- Format: `{Problem}\n\n{Rationale}`
+- MathQA content naturally distinguishes math through numbers, operators (×, /, ⇒), percentages, and step-by-step calculations
+- Rationales already vary in their opening phrases ("explanation:", "let x be...", direct calculations)
+- The original prefix concern was for invariant "Problem:"/"Solution:" markers — not applicable to MathQA's natural variation
 
-**Original analysis** (may or may not apply to MathQA):
+**Post-training test** (still think I should do it):
+1. Take a code sample and check routing
+2. Verify routing is driven by content, not format artifacts
 
-The concern conflates two phenomena:
-
-1. **Token-level routing bias**: The router preferentially routes tokens that look like "Problem:" to a specific expert.
-2. **Document-level classification shortcut**: The model "knows" a document is math because it saw "Problem:" at the start.
-
-For phenomenon #1: The MoE is in layers 8-11. By layer 8, the hidden state has been contextualized by 7 prior layers of attention. The router sees a representation that encodes context, not raw tokens.
-
-**Post-training test** (still valid regardless of formatting choice):
-1. Take a code sample and prepend whatever math prefix is used
-2. Run through the model and check routing
-3. If the router suddenly thinks it's math, the prefix is a strong signal
-4. If routing stays mostly unchanged, content dominates
-
-**Severity**: LOW-MEDIUM. Testable post-hoc.
+**Severity**: LOW. Resolved by format choice I believe. Just a FYI.
 
 ---
 
@@ -281,16 +270,18 @@ The current `data.py` references this dataset and will fail.
 
 ### Math Dataset — VERIFIED
 
-**Chosen**: `allenai/math_qa` (MathQA)
+**Chosen**: MathQA (allenai)
 
 | Property | Value |
 |----------|-------|
-| HF Path | `allenai/math_qa` |
+| Source | https://math-qa.github.io/math-QA/data/MathQA.zip |
 | Train Examples | 29,837 |
-| Estimated Size | ~12MB (exceeds 10MB target) |
+| Estimated Size | ~11.3MB (exceeds 10MB target) |
 | License | Apache 2.0 |
 | Fields | `Problem`, `Rationale` |
 | Style | Natural language word problems with step-by-step reasoning |
+
+**Note**: The HuggingFace loader (`allenai/math_qa`) seems to have used a deprecated script format and fails. We load directly from the source ZIP file.
 
 **Sample format** (raw from dataset):
 ```
@@ -298,35 +289,34 @@ Problem: A train running at 48 km/hr crosses a pole in 9 seconds. What is the le
 Rationale: Speed = (48 x 5/18) m/sec = (40/3) m/sec. Length = (40/3 x 9) = 120 m.
 ```
 
+**Training format** (no prefixes — see decision 007 revised):
+```
+{Problem}
+
+{Rationale}
+```
+
 **Why MathQA over alternatives**:
 - `hendrycks/competition_math`: DMCA takedown — not accessible
 - `nvidia/OpenMathInstruct-1`: ~95% Python code in solutions — blurs code/math distinction
 - `openai/gsm8k`: Only ~4MB — below 10MB target
-- `allenai/math_qa`: Pure natural language, sufficient volume, legally safe
+- MathQA: Pure natural language, sufficient volume, legally safe
 
 ---
 
-### MathQA Formatting — PENDING INVESTIGATION
+### MathQA Formatting — RESOLVED
 
-The dataset choice is verified, but **how to format the data for training** requires investigation.
+**Decision**: No prefixes. Format as `{Problem}\n\n{Rationale}`
 
-**Questions to answer**:
+**Investigation findings** (2025-01-27):
 
-1. **What do raw samples look like?** Examine 20-30 samples to understand the natural format.
+After examining 30+ MathQA samples:
 
-2. **Should prefixes be added?** Options:
-   - No prefixes: `{Problem}\n\n{Rationale}`
-   - Field names: `Problem: {Problem}\n\nRationale: {Rationale}`
-   - Generic: `Question: {Problem}\n\nAnswer: {Rationale}`
+1. **Content naturally distinguishes math**: Numbers, percentages, operators (×, /, +, -, ⇒), step-by-step calculations
+2. **Rationales vary naturally**: Start with "explanation:", "let x be...", direct calculations, etc.
+3. **No routing shortcut risk**: Unlike fixed "Problem:"/"Solution:" markers, MathQA's natural variation eliminates this concern
 
-3. **Does the prefix concern apply?** The original concern was for GSM8K + MATH with "Problem:/Solution:" markers. MathQA has different structure — need to evaluate whether:
-   - The natural format already distinguishes math from code/prose
-   - Adding prefixes helps or hurts domain separation
-   - Router shortcut risk exists for this specific format
-
-4. **What makes math content identifiable?** Numbers, operators, units, reasoning chains — these may be sufficient without explicit markers.
-
-**Action required**: Examine MathQA samples in detail before deciding on formatting.
+See decision 007 (revised) for full rationale.
 
 ---
 
@@ -372,8 +362,9 @@ from datasets import load_dataset
 code_ds = load_dataset("codeparrot/codeparrot-clean", split="train", streaming=True)
 # Field: sample["content"]
 
-# Math (MathQA)
-math_ds = load_dataset("allenai/math_qa", split="train")
+# Math (MathQA) — loaded from source ZIP, not HuggingFace
+# See _load_mathqa_data() in data.py
+# URL: https://math-qa.github.io/math-QA/data/MathQA.zip
 # Fields: sample["Problem"], sample["Rationale"]
 
 # Prose (WikiText-103)
@@ -393,19 +384,11 @@ prose_ds = load_dataset("Skylion007/openwebtext", split="train", streaming=True)
 
 Before writing any implementation code, these items require investigation and verification.
 
-#### 1.1 MathQA Format Investigation
+#### 1.1 MathQA Format Investigation — COMPLETE
 
-**Goal**: Decide how to format MathQA samples for training.
+**Decision**: No prefixes. Format as `{Problem}\n\n{Rationale}`
 
-**Steps**:
-1. Examine 20-30 raw MathQA samples
-2. Note the natural structure of `Problem` and `Rationale` fields
-3. Consider formatting options:
-   - Raw: `{Problem}\n\n{Rationale}`
-   - With field names: `Problem: {Problem}\n\nRationale: {Rationale}`
-   - Other variations
-4. Evaluate whether the format naturally distinguishes math from code/prose
-5. Document the decision and rationale
+See decision 007 (revised) for full investigation results.
 
 #### 1.2 Train/Eval Split Formula Verification
 
@@ -499,13 +482,13 @@ def test_format_routing_hypothesis(model, moe_modules, tokenizer, code_samples):
 
 These proposals came from the multi-model debate. They need independent verification before implementation.
 
-| Item | Proposed Approach | What Needs Verification |
-|------|-------------------|------------------------|
-| MathQA formatting | Unknown | How to format `Problem`/`Rationale` fields |
-| Train/eval split formula | `max(20, int(n * 0.05))` | Is this appropriate for our data sizes? |
-| Shuffle buffer | `max(1000, size_mb*200)` | Is this heuristic justified? |
-| Code dataset | CodeParrot-clean | Verify sample quality and diversity |
-| Prose dataset | WikiText-103 or OpenWebText | Verify which is better for domain separation |
+| Item | Proposed Approach | Status |
+|------|-------------------|--------|
+| MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | **RESOLVED** — see decision 007 |
+| Train/eval split formula | `max(20, int(n * 0.05))` | Pending verification |
+| Shuffle buffer | `max(1000, size_mb*200)` | Pending verification |
+| Code dataset | CodeParrot-clean | Pending sample review |
+| Prose dataset | WikiText-103 or OpenWebText | Pending sample review |
 
 ### Post-Training
 
@@ -519,10 +502,10 @@ These proposals came from the multi-model debate. They need independent verifica
 
 | Line | Issue | Fix Required | Status |
 |------|-------|--------------|--------|
-| 163, 180-181 | Uses GSM8K + `hendrycks/competition_math` | Replace with `allenai/math_qa` | **BLOCKING** — dataset is DMCA'd |
+| 140-205 | Uses GSM8K + `hendrycks/competition_math` | Replace with MathQA from ZIP | **BLOCKING** — dataset is DMCA'd |
 | N/A | No train/eval split | Add text-level split before packing | **BLOCKING** — HIGH severity |
 | 113 | No shuffle buffer for CodeParrot | TBD after investigation | Pending |
-| 170, 187 | Fixed prefixes | TBD after MathQA format investigation | Pending |
+| — | Fixed prefixes | No prefixes for MathQA | **RESOLVED** — see decision 007 |
 
 ---
 

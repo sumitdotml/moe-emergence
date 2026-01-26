@@ -2,7 +2,7 @@
 
 **Date:** 2025-01-21 (original), 2025-01-27 (revised)
 **Status:** Revised
-**Context Commit:** `4b7b45e` (original), current HEAD (revision)
+**Context Commit:** `4b7b45e` (original), `e18bea0` (revision)
 
 ---
 

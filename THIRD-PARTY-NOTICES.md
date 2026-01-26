@@ -59,7 +59,7 @@ Datasets are downloaded at runtime from Hugging Face and are not redistributed w
 
 - **License:** Apache License 2.0
 - **Copyright:** Allen Institute for AI
-- **Source:** https://huggingface.co/datasets/allenai/math_qa
+- **Source:** https://aclanthology.org/N19-1245/
 - **Paper:** Amini et al., "MathQA: Towards Interpretable Math Word Problem Solving" (2019)
 - **Usage:** Math domain training data
 

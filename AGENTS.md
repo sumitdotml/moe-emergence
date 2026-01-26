@@ -156,43 +156,39 @@ All issues from code reviews have been fixed:
 
 **Current Phase:** Phase 3 (Dataset Preparation) — Data Pipeline Fixes
 
-**Critical Discovery:**
-
-The `hendrycks/competition_math` dataset has a **DMCA takedown** and is NOT accessible. The current `data.py` will fail.
-
 **Blockers (No Training Until Resolved):**
 
-| Issue | Severity | Status |
-| ----- | -------- | ------ |
-| Train/eval leakage | **HIGH** | Needs fix: split at TEXT level BEFORE packing |
-| Math dataset DMCA'd | **HIGH** | Replacing with `allenai/math_qa` |
-| Code/Prose dataset choice | MEDIUM | Run sample test to verify quality |
+| Issue                     | Severity | Status                                           |
+| ------------------------- | -------- | ------------------------------------------------ |
+| Train/eval leakage        | **HIGH** | Needs fix: split at TEXT level BEFORE packing    |
+| Math dataset              | ~~HIGH~~ | **DONE** — MathQA loader implemented in `data.py`|
+| Code/Prose dataset choice | MEDIUM   | Run sample test to verify quality                |
 
 **Verified Decisions:**
 
-| Decision | Choice | Notes |
-| -------- | ------ | ----- |
-| Math dataset | `allenai/math_qa` | 29K examples, ~12MB, Apache 2.0, pure natural language |
+| Decision          | Choice                                   | Notes                                                     |
+| ----------------- | ---------------------------------------- | --------------------------------------------------------- |
+| Math dataset      | MathQA (allenai)                         | 29K examples, ~11.3MB, Apache 2.0, loaded from source ZIP |
+| MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | See decision 007 (revised)                                |
 
 **Pending Investigation:**
 
-These items require verification before implementation. Do not assume they are correct.
+These items require verification before implementation. Must not assume they are correct.
 
-| Item | What Needs Investigation | Status |
-| ---- | ------------------------ | ------ |
-| MathQA formatting | How to format `Problem` and `Rationale` fields? Use prefixes? Which ones? Is prefix concern even relevant? | **TODO** |
+| Item                     | What Needs Investigation                                          | Status   |
+| ------------------------ | ----------------------------------------------------------------- | -------- |
 | Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **TODO** |
-| Shuffle buffer formula | Is `max(1000, size_mb*200)` justified? Where did this come from? | **TODO** |
-| Code dataset | CodeParrot-clean vs StarCoderData — verify samples | **TODO** |
-| Prose dataset | WikiText-103 vs OpenWebText — verify samples | **TODO** |
+| Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **TODO** |
+| Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **TODO** |
+| Prose dataset            | WikiText-103 vs OpenWebText — verify samples                      | **TODO** |
 
 **Next Actions:**
 
-1. Investigate MathQA format — examine actual samples, decide on formatting approach
+1. ~~Update `moe-emergence/data.py` with MathQA loader (from ZIP)~~ — **DONE**
 2. Verify train/eval split rationale — is the formula appropriate for our data sizes?
 3. Verify shuffle buffer rationale — is this heuristic justified?
 4. Run `uv run python sample_test.py` to inspect code/prose dataset samples
-5. After all investigations complete, update `moe-emergence/data.py`
+5. Implement train/eval split in `data.py`
 6. Run verification and confirm no train/eval leakage
 
 ## Budget Constraint
