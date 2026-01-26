@@ -159,3 +159,9 @@ Ruff being used for formatting here.
 
 - **VSCode / Cursor**: Install the Ruff extension. Settings are in `.vscode/settings.json`.
 - **Neovim**: Configure Ruff inside nvim itself. For reference, see how I've done [mine](https://github.com/search?q=repo%3Asumitdotml%2Fdotfiles%20ruff&type=code). For formatting, my command is `<leader>gf`.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+For third-party software, datasets, and academic references, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
