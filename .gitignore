@@ -10,6 +10,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Data cache
+.cache/
+
 .DS_Store
 
 !.claude/

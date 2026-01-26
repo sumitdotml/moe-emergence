@@ -101,6 +101,7 @@ Report at the end with only a 1-3 sentence summary of what you changed
 
 - Keep large datasets, model checkpoints, and generated plots out of version control unless explicitly requested.
 - When adding notebooks, clear or minimize outputs to keep diffs small and focused.
+- **All cached data must live in `.cache/` at the repository root** — not in `~/.cache/` or other system locations. This includes HuggingFace datasets, model weights, and any downloaded files. The `.cache/` directory is gitignored.
 
 ---
 
