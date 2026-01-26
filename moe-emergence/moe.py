@@ -96,7 +96,7 @@ class Router(nn.Module):
 
     References:
         - Noisy Top-k Gating: Shazeer et al. "Outrageously Large Neural Networks" (2017)
-        - STE for Top-1: Hinton et al. "Distilling the Knowledge in a Neural Network" (2015)
+        - STE for Top-1: Bengio et al. "Estimating or Propagating Gradients Through Stochastic Neurons" (2013)
     """
 
     training_step: Tensor
