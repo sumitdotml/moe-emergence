@@ -3,6 +3,7 @@ name = "moe-emergence"
 version = "0.1.0"
 description = "Training a small MoE model on 3 domains (code, math, prose) to demonstrate expert specialization emergence."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.4.2",
