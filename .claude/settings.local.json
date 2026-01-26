@@ -6,7 +6,11 @@
       "Bash(ruff format:*)",
       "Bash(uv run ruff:*)",
       "Bash(uv run python:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl:*)"
     ]
   }
 }
