@@ -174,7 +174,7 @@ All issues from code reviews have been fixed:
 | ------------------------- | -------- | ------------------------------------------------ |
 | Train/eval leakage        | ~~HIGH~~ | **DONE** — text-level split in `data.py`         |
 | Math dataset              | ~~HIGH~~ | **DONE** — MathQA loader implemented in `data.py`|
-| Code/Prose dataset choice | MEDIUM   | Run sample test to verify quality                |
+| Code/Prose dataset choice | ~~MEDIUM~~ | **DONE** — see decision 010                    |
 
 **Verified Decisions:**
 
@@ -182,6 +182,8 @@ All issues from code reviews have been fixed:
 | ----------------- | ---------------------------------------- | --------------------------------------------------------- |
 | Math dataset      | MathQA (allenai)                         | 29K examples, ~11.3MB, Apache 2.0, loaded from source ZIP |
 | MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | See decision 007 (revised)                                |
+| Code dataset      | CodeParrot-clean                         | Diverse Python, multiple licenses, see decision 010       |
+| Prose dataset     | AllenAI C4 (en)                          | Natural web text, well-filtered, see decision 010         |
 
 **Pending Investigation:**
 
@@ -191,8 +193,8 @@ These items require verification before implementation. Must not assume they are
 | ------------------------ | ----------------------------------------------------------------- | -------- |
 | Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **DONE** — uses Decision 008 formula |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **TODO** |
-| Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **TODO** |
-| Prose dataset            | WikiText-103 vs OpenWebText — verify samples                      | **TODO** |
+| Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **DONE** — CodeParrot-clean |
+| Prose dataset            | WikiText-103 vs OpenWebText vs C4 vs FineWeb — verify samples     | **DONE** — AllenAI C4 (en)  |
 
 **Next Actions:**
 
@@ -200,7 +202,7 @@ These items require verification before implementation. Must not assume they are
 2. ~~Verify train/eval split rationale~~ — **DONE** (uses `min(max(10, n*0.05), n*0.10)`)
 3. ~~Implement train/eval split in `data.py`~~ — **DONE**
 4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
-5. Verify code/prose dataset samples — run `uv run python sample_test.py`
+5. ~~Verify code/prose dataset samples~~ — **DONE** (decision 010)
 6. Verify shuffle buffer rationale — is this heuristic justified?
 7. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
 
