@@ -202,6 +202,7 @@ These items require verification before implementation. Must not assume they are
 4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
 5. Verify code/prose dataset samples — run `uv run python sample_test.py`
 6. Verify shuffle buffer rationale — is this heuristic justified?
+7. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
 
 ## Budget Constraint
 
