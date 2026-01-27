@@ -30,17 +30,13 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 ### Phase 3: Dataset Preparation
 
 - [x] Sequence packing (not padding)
-- [ ] Code/math/prose data collection
 - [x] `PackedMixedDomainDataset` class
-- [x] Critical analysis of data pipeline — see `docs/DATA-PIPELINE-CRITICAL-ANALYSIS.md`
-  - **Critical**: `hendrycks/competition_math` is DMCA'd — must use `allenai/math_qa`
-  - **Critical**: Train/eval split must happen at TEXT level before packing
-  - **Pending investigations** (before implementation):
-    1. MathQA formatting — how to format `Problem`/`Rationale` fields
-    2. Train/eval split formula — verify `max(20, n*0.05)` is appropriate
-    3. Shuffle buffer formula — verify heuristic is justified
-    4. Code/prose dataset samples — run `sample_test.py`
-  - After investigations, update `moe_emergence/data.py` and verify no leakage
+- [x] Train/eval split at TEXT level (before packing) — see decision 008
+- [x] Dataset choices finalized — see decision 010:
+  - **Code**: CodeParrot-clean (diverse Python, multiple licenses)
+  - **Math**: MathQA from allenai (29K word problems with rationales)
+  - **Prose**: AllenAI C4 English (natural web text, well-filtered)
+- [ ] Verify shuffle buffer rationale
 
 ### Phase 4: Training Infrastructure
 
