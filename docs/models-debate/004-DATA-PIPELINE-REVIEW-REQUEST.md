@@ -22,14 +22,17 @@ and surface any missing checks or risks.
 ## What We Implemented
 
 **Pipeline code:**
-- `moe-emergence/data.py`
+
+- `moe_emergence/data.py`
 
 **Spec and decision docs:**
+
 - `docs/DATA-PIPELINE.md`
 - `docs/decisions/005-phase3-data-sizing.md`
 - `docs/code-reviews/005-2025-12-26-data-py-fix.md`
 
 **Current status:**
+
 - Phase 3 pipeline implemented; data collection still pending
   (see `README.md` and `docs/README.md`).
 
@@ -38,17 +41,20 @@ and surface any missing checks or risks.
 ## Data Sources (Current Plan)
 
 **Code:**
+
 - `codeparrot/codeparrot-clean` (train, streaming)
 - Filter: 100 < len(text) < 10000 chars
 - Note: multi-language, Python-heavy; no language filtering yet.
 
 **Math:**
+
 - `gsm8k` (main, train) + `hendrycks/competition_math` (train)
 - Format: "Problem: ...\n\nSolution: ..."
 - MATH only loads if GSM8K does not reach target size.
 - Uses `trust_remote_code=True` for MATH.
 
 **Prose:**
+
 - `Salesforce/wikitext` (wikitext-103-raw-v1, train)
 - Filter: 200 < len(text) < 10000 chars
 

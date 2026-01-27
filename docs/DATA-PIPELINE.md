@@ -169,13 +169,13 @@ Each loader returns metadata including:
 
 ```bash
 # Quick test (small dataset)
-uv run python moe-emergence/data.py --size-mb 1 --block-size 256
+uv run python moe_emergence/data.py --size-mb 1 --block-size 256
 
 # Development iteration
-uv run python moe-emergence/data.py --size-mb 5
+uv run python moe_emergence/data.py --size-mb 5
 
 # Final runs with balancing
-uv run python moe-emergence/data.py --size-mb 10 --balance-tokens --seed 42
+uv run python moe_emergence/data.py --size-mb 10 --balance-tokens --seed 42
 ```
 
 ### Flags
@@ -203,7 +203,7 @@ uv run python moe-emergence/data.py --size-mb 10 --balance-tokens --seed 42
 ## File Structure
 
 ```
-moe-emergence/data.py
+moe_emergence/data.py
 ├── _dataset_meta()           # Extract HF dataset metadata
 ├── pack_sequences()          # Core packing logic
 ├── load_code_data()          # CodeParrot loader

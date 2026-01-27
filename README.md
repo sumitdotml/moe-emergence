@@ -40,7 +40,7 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
     2. Train/eval split formula — verify `max(20, n*0.05)` is appropriate
     3. Shuffle buffer formula — verify heuristic is justified
     4. Code/prose dataset samples — run `sample_test.py`
-  - After investigations, update `moe-emergence/data.py` and verify no leakage
+  - After investigations, update `moe_emergence/data.py` and verify no leakage
 
 ### Phase 4: Training Infrastructure
 
@@ -127,30 +127,30 @@ Can play with GPT-2 generation (vanilla or MoE):
 
 ```bash
 # vanilla GPT-2
-uv run python moe-emergence/gpt2_inference.py --prompt "Once upon a time"
+uv run python moe_emergence/gpt2_inference.py --prompt "Once upon a time"
 
 # untrained MoE (Phase 2)
-uv run python moe-emergence/gpt2_inference.py --moe --prompt "def fibonacci(n):"
+uv run python moe_emergence/gpt2_inference.py --moe --prompt "def fibonacci(n):"
 
 # trained MoE from checkpoint (Phase 5+) (btw this isn't ready yet since I haven't done MoE training yet, coming soon)
-uv run python moe-emergence/gpt2_inference.py \
+uv run python moe_emergence/gpt2_inference.py \
   --checkpoint checkpoints/run-002-step-10000.pt \
   --prompt "Solve the equation x^2 + 5x + 6 = 0"
 
 # creative sampling
-uv run python moe-emergence/gpt2_inference.py \
+uv run python moe_emergence/gpt2_inference.py \
   --prompt "In a distant galaxy" \
   --sample --temperature 0.9 --max-tokens 100
 ```
 
-See `python moe-emergence/gpt2_inference.py --help` for all options.
+See `python moe_emergence/gpt2_inference.py --help` for all options.
 
 ### Verification
 
 Run Phase 2 verification (10 comprehensive tests):
 
 ```bash
-uv run python moe-emergence/verify_gpt2_integration.py
+uv run python moe_emergence/verify_gpt2_integration.py
 ```
 
 ## Code Formatting

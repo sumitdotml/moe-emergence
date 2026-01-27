@@ -1,6 +1,6 @@
 ⏺ Let me read the current state of data.py to see GPT-5.2's changes:
 
-⏺ Read(moe-emergence/data.py)
+⏺ Read(moe_emergence/data.py)
 ⎿  Read 555 lines
 
 ⏺ Read(docs/code-reviews/005-2025-12-26-data-py-fix.md)

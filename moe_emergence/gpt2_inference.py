@@ -6,22 +6,22 @@ Supports vanilla GPT-2, untrained MoE, and trained MoE from checkpoints.
 
 Usage:
     # Vanilla GPT-2
-    python moe-emergence/gpt2_inference.py
+    python moe_emergence/gpt2_inference.py
 
     # With untrained MoE layers (Phase 2)
-    python moe-emergence/gpt2_inference.py --moe
+    python moe_emergence/gpt2_inference.py --moe
 
     # With trained MoE checkpoint (Phase 5+)
-    python moe-emergence/gpt2_inference.py --checkpoint checkpoints/run-002-step-10000.pt
+    python moe_emergence/gpt2_inference.py --checkpoint checkpoints/run-002-step-10000.pt
 
     # Custom prompt
-    python moe-emergence/gpt2_inference.py --prompt "Once upon a time"
+    python moe_emergence/gpt2_inference.py --prompt "Once upon a time"
 
     # Longer generation
-    python moe-emergence/gpt2_inference.py --max-tokens 100
+    python moe_emergence/gpt2_inference.py --max-tokens 100
 
     # Sampling (more creative)
-    python moe-emergence/gpt2_inference.py --sample --temperature 0.8 --top-p 0.9
+    python moe_emergence/gpt2_inference.py --sample --temperature 0.8 --top-p 0.9
 """
 
 import argparse

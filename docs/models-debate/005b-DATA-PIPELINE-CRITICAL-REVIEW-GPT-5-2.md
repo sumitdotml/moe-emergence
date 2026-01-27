@@ -19,18 +19,18 @@
 Data Pipeline Findings (My Review)
 
 - HIGH: CodeParrot is streamed and never shuffled, so you take the first N MB, which can bias language/topic mix and
-  distort domain balance; for small targets this is a real representativeness risk. moe-emergence/data.py:113 moe-
+  distort domain balance; for small targets this is a real representativeness risk. moe_emergence/data.py:113 moe-
   emergence/data.py:119
 - MEDIUM: The fixed "Problem:" and "Solution:" prefixes create a strong lexical shortcut for math; routing may
-  specialize on the prefix rather than math content, so consider ablation or prefix removal. moe-emergence/data.py:147
+  specialize on the prefix rather than math content, so consider ablation or prefix removal. moe_emergence/data.py:147
   docs/DATA-PIPELINE.md:44
 - MEDIUM: Subdomain provenance is discarded at block level (GSM8K vs MATH, code language), so you cannot tell whether
-  experts split by subsource rather than by domain; add a subdomain tag or per-block origin logging. moe-emergence/
-  data.py:85 moe-emergence/data.py:196
+  experts split by subsource rather than by domain; add a subdomain tag or per-block origin logging. moe_emergence/
+  data.py:85 moe_emergence/data.py:196
 - MEDIUM: No validation slice is defined anywhere beyond "evaluation is separate"; without even a small holdout, any
   specialization narrative is harder to defend. docs/DATA-PIPELINE.md:13
 - LOW-MEDIUM: Token balancing is optional and off by default; given known tokenization skew, this should be a
-  conscious, logged choice for each run. docs/DATA-PIPELINE.md:116 moe-emergence/data.py:322
+  conscious, logged choice for each run. docs/DATA-PIPELINE.md:116 moe_emergence/data.py:322
 - LOW: WikiText-103 bias is already documented; if unchanged, the report should explicitly frame results as
   "encyclopedic prose" rather than general prose. docs/DATA-PIPELINE.md:61 docs/DATA-PIPELINE.md:197
 
@@ -41,7 +41,7 @@ Cross-check
 - Opus-only: per-domain loss tracking and tail-drop nondeterminism emphasis, plus the oversampling recommendation.
   docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md:65 docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md:86
 - Mine-only: streaming sampling bias, math prefix leakage, subdomain label loss, and the default-off balancing risk.
-  moe-emergence/data.py:113 moe-emergence/data.py:147 moe-emergence/data.py:85 docs/DATA-PIPELINE.md:116
+  moe_emergence/data.py:113 moe_emergence/data.py:147 moe_emergence/data.py:85 docs/DATA-PIPELINE.md:116
 
 Open Questions
 
@@ -75,7 +75,7 @@ CLAUDE OPUS 4.5 PASS 2 Quality Issues
   if this changes, it must be a new decision and reflected in docs. docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md:203 docs/
   decisions/005-phase3-data-sizing.md:47
 - “Math prefix leakage” is plausible but framed as a strong conclusion; it should be explicitly labeled a tradeoff or
-  supported with a small ablation, since prefixes are also a deliberate domain signal. docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md:165 moe-emergence/data.py:170
+  supported with a small ablation, since prefixes are also a deliberate domain signal. docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md:165 moe_emergence/data.py:170
 
 Gaps / Underweighted
 
@@ -107,7 +107,7 @@ If you decide on any of these, I recommend logging it via /doc-decision so the a
 Scope
 
 - Reviewed: docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md (PASS 3), docs/models-debate/005c-DATA-PIPELINE-CRITICAL-REVIEW-GEMINI-3.md, docs/DATA-PIPELINE.md,
-  docs/decisions/005-phase3-data-sizing.md, moe-emergence/data.py.
+  docs/decisions/005-phase3-data-sizing.md, moe_emergence/data.py.
 - No web search used; external citations in other reviews remain unverified.
 
 Critical Review of Gemini 3 Pass 1
@@ -417,11 +417,13 @@ Scope
 Critical Review of Opus Pass 9
 
 Strengths
+
 - Correctly identifies text-level split before packing as essential to avoid leakage.
 - Adds shuffle seeding for reproducibility.
 - Keeps the core decision set stable and implementation‑focused.
 
 Issues / Assumptions to Tighten
+
 - Holdout sizing is still expressed in blocks while splitting happens in text space; decide whether holdout targets
   text counts or block counts and document the tradeoff.
 - The "Verified" shuffle API claim remains doc‑level until run; keep it as a checklist item, not a conclusion.
@@ -437,12 +439,14 @@ New Constraint to Preserve Correctness
 Where I Land Now
 
 We are converged on the blockers, with one clarity add:
-1) Define holdout in text space first, accept resulting block counts, and log them explicitly.
-2) Treat shuffle support and determinism as verified only after a local check.
+
+1. Define holdout in text space first, accept resulting block counts, and log them explicitly.
+2. Treat shuffle support and determinism as verified only after a local check.
 
 Decision Reminder
 
 No training until these are explicitly decided and logged via /doc-decision:
+
 - Streaming mitigation method and buffer sizing rule (including seed).
 - Marker handling strategy (remove vs randomize vs exclude; whether empty markers are allowed).
 - Validation strategy (text‑level split definition and sizing target).
@@ -460,12 +464,14 @@ Scope
 Critical Review of Opus Pass 10
 
 Strengths
+
 - Resolves the holdout sizing ambiguity by defining it in text space.
 - Removes empty prefixes to preserve boundary cues.
 - Clarifies `size_mb` as pre‑split total and logs both text and block counts.
 - Adds explicit guidance for streaming + shuffle + text‑level split workflow.
 
 Issues / Assumptions to Tighten
+
 - The holdout formula uses text counts but still assumes a minimum of 20 texts; for very small domains this may be too
   aggressive. Consider a minimum of 10 texts or a min percentage when data is tiny.
 - The buffer size formula remains heuristic; document that it is a bias‑reduction knob, not a guarantee.
@@ -476,12 +482,14 @@ Issues / Assumptions to Tighten
 Where I Land Now
 
 We are converged enough to implement, with two guardrails:
-1) Ensure the text list is shuffled deterministically before train/eval split.
-2) Treat buffer size and holdout size as logged parameters for every run.
+
+1. Ensure the text list is shuffled deterministically before train/eval split.
+2. Treat buffer size and holdout size as logged parameters for every run.
 
 Decision Reminder
 
 No training until these are explicitly decided and logged via /doc-decision:
+
 - Streaming mitigation method and buffer sizing rule (including seed).
 - Marker handling strategy (remove vs randomize vs exclude; empty markers disallowed).
 - Validation strategy (text‑level split definition and sizing target).
@@ -499,11 +507,13 @@ Scope
 Critical Review of Opus Pass 11
 
 Strengths
+
 - Accepts deterministic text shuffle before split and explicit parameter logging.
 - Tightens holdout minimum to 10 texts for tiny domains.
 - Clearly enumerates the critical issues resolved and proposes concrete next steps.
 
 Issues / Assumptions to Tighten
+
 - Holdout minimum of 10 texts is still arbitrary; document as a heuristic, not a guarantee.
 - "Log prefix choices in every run" conflicts with the earlier decision to avoid per‑example prefix logging; clarify
   whether this means logging the prefix sets only (recommended) or logging per‑example choices (scope creep).
@@ -514,12 +524,14 @@ Issues / Assumptions to Tighten
 Where I Land Now
 
 We are converged enough to implement, with two clarifications:
-1) Keep prefix logging to the configured prefix sets, not per‑example choices, unless you plan prefix‑specific analysis.
-2) Treat min holdout and buffer size rules as documented heuristics and log their computed values for each run.
+
+1. Keep prefix logging to the configured prefix sets, not per‑example choices, unless you plan prefix‑specific analysis.
+2. Treat min holdout and buffer size rules as documented heuristics and log their computed values for each run.
 
 Decision Reminder
 
 No training until these are explicitly decided and logged via /doc-decision:
+
 - Streaming mitigation method and buffer sizing rule (including seed).
 - Marker handling strategy (randomize both; no empty markers; logging scope).
 - Validation strategy (text‑level split definition, min holdout rule, and sizing target).
@@ -531,18 +543,18 @@ No training until these are explicitly decided and logged via /doc-decision:
 
 Final Recommendations (Locked)
 
-1) Streaming mitigation
+1. Streaming mitigation
    - Use streaming shuffle with seed: `ds.shuffle(buffer_size=max(1000, size_mb * 200), seed=args.seed)`.
    - Log buffer_size and seed for every run.
    - Treat buffer_size as a heuristic bias-reduction knob, not a guarantee.
 
-2) Math prefix handling
+2. Math prefix handling
    - Randomize both markers from fixed non-empty sets:
      - Problem: ["Problem:", "Question:", "Given:"]
      - Solution: ["Solution:", "Answer:", "Therefore:"]
    - Do NOT log per-example prefix choices; only log the prefix sets and seed.
 
-3) Validation strategy
+3. Validation strategy
    - Split at text/document level before packing.
    - Deterministically shuffle texts with seed before split.
    - Holdout sizing in text space:
@@ -550,11 +562,11 @@ Final Recommendations (Locked)
    - Pack train and eval separately per domain; log text counts and resulting block counts.
    - `--size-mb` applies to total (train+eval) pre-split; document that eval is ~5% of total.
 
-4) Subdomain tracking
+4. Subdomain tracking
    - Add math-only subdomain labels: "gsm8k" vs "competition_math".
    - Defer code language ID until analysis demands it.
 
-5) Documentation/Logging
+5. Documentation/Logging
    - Keep `--balance-tokens` opt-in per decision doc; always log the choice.
    - Document WikiText-103 as "encyclopedic prose" in results.
 

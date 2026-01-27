@@ -5,8 +5,8 @@ I'm starting a deep dive into data.py. My initial focus is on pinpointing the bo
 Code Evaluation Underway
 I'm now carefully examining the data pipeline's code, focusing on data loading and preprocessing steps. I'm cross-referencing this with the documentation to understand the reasoning behind specific implementations. Simultaneously, I am evaluating the arguments of the two AI models. My goal is to synthesize the information to make informed recommendations.
 Evaluating The Data
-I've begun by reading moe-emergence/data.py, docs/DATA-PIPELINE.md, and quickly glanced at docs/decisions/005-phase3-data-sizing.md. I am now synthesizing my independent analysis. So far, the data sources seem reasonable for a proof-of-concept. I'm focusing on the implementation details within the pipeline and thinking about potential risks now.
-→ Read moe-emergence/data.py
+I've begun by reading moe_emergence/data.py, docs/DATA-PIPELINE.md, and quickly glanced at docs/decisions/005-phase3-data-sizing.md. I am now synthesizing my independent analysis. So far, the data sources seem reasonable for a proof-of-concept. I'm focusing on the implementation details within the pipeline and thinking about potential risks now.
+→ Read moe_emergence/data.py
 → Read docs/DATA-PIPELINE.md
 → Read docs/decisions/005-phase3-data-sizing.md
 Thinking: Considering Code Structure
@@ -20,9 +20,9 @@ I'm now consolidating my thoughts, structuring my critique around the strengths 
 Concluding My Assessment
 I'm synthesizing all the analysis and critique. I'll begin by analyzing the data pipeline, followed by a review of the debate's points, highlighting the strengths and weaknesses of each model's observations. Finally, I will offer prioritized recommendations for improving the code and data handling, emphasizing the most critical risks, like the CodeParrot streaming bias, which demands immediate attention. I will now prepare the final document.
 Independent Analysis: Data Pipeline & Model Debate
-Based on a review of moe-emergence/data.py and the associated documentation/debate logs, here is the critical analysis of the project's data strategy.
+Based on a review of moe_emergence/data.py and the associated documentation/debate logs, here is the critical analysis of the project's data strategy.
 
-1. Critical Analysis of moe-emergence/data.py
+1. Critical Analysis of moe_emergence/data.py
    The current implementation is a legitimate "smoke test" pipeline but is scientifically fragile for demonstrating expert specialization. While correctly implemented from a refined valid Python perspective, the methodological decisions undermine the project's goal: observing genuine emergence vs. artifacts.
    Critical Weaknesses (By Severity):
 1. HIGH: Streaming Selection Bias (The "Alphabetical" Trap)

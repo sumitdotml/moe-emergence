@@ -18,7 +18,7 @@ Tests:
 10. Routing covers multiple experts for a large batch
 
 Usage:
-    python moe-emergence/verify_gpt2_integration.py
+    python moe_emergence/verify_gpt2_integration.py
 """
 
 from __future__ import annotations

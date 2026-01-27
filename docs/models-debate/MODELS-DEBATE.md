@@ -4,24 +4,24 @@ Participants: GPT-5.2
 Commit Reviewed: 31252b6ddc4a73c8776ffdf8ca53fc79988f35c2
 ---
 
-Reviewed moe-emergence/moe.py against README.md and project-design/MOE-PROJECT-DESIGN-V3.md; below are the
+Reviewed moe_emergence/moe.py against README.md and project-design/MOE-PROJECT-DESIGN-V3.md; below are the
 critical findings focused on load balancing and MoE behavior (ignoring the SwiGLU expert choice as requested).
 
 Findings
 
 - Medium: Router noise is effectively disabled unless set_noise_annealing is called (anneal_steps starts at 0),
   but the docstring implies noise_std is active by default; this can silently remove symmetry breaking and
-  diverges from the V3 plan. moe-emergence/moe.py:94 moe-emergence/moe.py:172
+  diverges from the V3 plan. moe_emergence/moe.py:94 moe_emergence/moe.py:172
 - Medium: Router only returns noisy router_probs; there is no clean (pre-noise) probability output, so entropy/
   specialization analysis will be confounded by annealing, contrary to V3’s “clean vs routing” separation. moe-
-  emergence/moe.py:186 moe-emergence/moe.py:261
+  emergence/moe.py:186 moe_emergence/moe.py:261
 - Low: Router assumes 3D input [batch, seq, hidden]; if you follow the V3 pseudocode or reuse it with flattened
-  [tokens, hidden], it will error. Consider supporting 2D or making the contract explicit. moe-emergence/
+  [tokens, hidden], it will error. Consider supporting 2D or making the contract explicit. moe_emergence/
   moe.py:130
 - Low: .view on potentially non-contiguous tensors can throw at runtime; .reshape is safer for x and x_flat. moe-
-  emergence/moe.py:133 moe-emergence/moe.py:374
+  emergence/moe.py:133 moe_emergence/moe.py:374
 - Low: Load-balance docstring says “fraction of tokens routed,” but for top‑k>1 you compute fraction of
-  assignments (sum to 1). Functionally fine, but the wording is misleading. moe-emergence/moe.py:400 moe-
+  assignments (sum to 1). Functionally fine, but the wording is misleading. moe_emergence/moe.py:400 moe-
   emergence/moe.py:451
 
 Open Questions
@@ -104,7 +104,7 @@ Next Steps (Before Training)
 1. Fix H1: Add router_probs_clean and entropy to RouterOutput
 2. Fix M1: Either enable noise by default OR fix docstring
 3. Fix L1: Replace .view() with .reshape()
-4. Commit fixes, then run /doc-review moe-emergence/moe.py to verify
+4. Commit fixes, then run /doc-review moe_emergence/moe.py to verify
 
 ---
 

@@ -124,7 +124,7 @@ Solution: {solution_text}
 ### File Structure
 
 ```
-moe-emergence/data.py
+moe_emergence/data.py
 ├── pack_sequences()
 ├── load_code_data(max_size_mb)
 ├── load_math_data(max_size_mb)

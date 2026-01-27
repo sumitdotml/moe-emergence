@@ -95,18 +95,18 @@ Standardized comment style using `:::` markers for section headers:
 
 Per GPT-5.2's assessment, the following are **not required for V3 spec** but may be useful at scale:
 
-| Gap                     | Description                                    | Status                         |
-| ----------------------- | ---------------------------------------------- | ------------------------------ |
+| Gap                     | Description                                    | Status                                                       |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
 | 2D input support        | Router assumes 3D input `[batch, seq, hidden]` | Won't fix (see `docs/decisions/004-router-3d-only-input.md`) |
-| top-k > n_experts guard | No validation if `topk > n_experts`            | ✅ Fixed in `7ac4f87`          |
-| Faster expert batching  | Loop-based dispatch is O(n_experts)            | Optional (fine at small scale) |
+| top-k > n_experts guard | No validation if `topk > n_experts`            | ✅ Fixed in `7ac4f87`                                        |
+| Faster expert batching  | Loop-based dispatch is O(n_experts)            | Optional (fine at small scale)                               |
 
 ---
 
 ## Verification
 
-- [x] `python moe-emergence/gpt2_moe.py` passes (smoke test)
-- [x] `python moe-emergence/training_demo.py` passes
+- [x] `python moe_emergence/gpt2_moe.py` passes (smoke test)
+- [x] `python moe_emergence/training_demo.py` passes
 - [x] No regressions in loss values or gradient flow
 
 ---

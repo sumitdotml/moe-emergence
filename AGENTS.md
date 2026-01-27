@@ -14,7 +14,7 @@ This project maintains rigorous documentation for a technical report. **Every si
 | ----------------- | --------------------------- | ----------------------------------------------- |
 | `/doc-decision`   | Log a design choice         | `/doc-decision chose top-1 routing over top-2`  |
 | `/doc-experiment` | Log a training run          | `/doc-experiment completed main MoE run`        |
-| `/doc-review`     | Code review against V3 spec | `/doc-review moe-emergence/moe.py`              |
+| `/doc-review`     | Code review against V3 spec | `/doc-review moe_emergence/moe.py`              |
 | `/doc-paper`      | Add literature notes        | `/doc-paper Switch Transformer Fedus 2021`      |
 | `/doc-fix`        | Document a bug fix          | `/doc-fix fixed gradient flow in top-1 routing` |
 | `/doc-status`     | Project status summary      | `/doc-status`                                   |
@@ -66,7 +66,7 @@ Report at the end with only a 1-3 sentence summary of what you changed
 
 ## Project Structure & Module Organization
 
-- `moe-emergence/`: Core Python modules for MoE routing and GPT-2 integration (`moe.py`, `ffn.py`, `gpt2_moe.py`, `training_demo.py`).
+- `moe_emergence/`: Core Python modules for MoE routing and GPT-2 integration (`moe.py`, `ffn.py`, `gpt2_moe.py`, `training_demo.py`).
 - `notebooks/`: Exploratory experiments and visualizations.
 - `project-design/`: Design notes and project plans.
 - `README.md`: Goals, current status, and references.
@@ -74,11 +74,11 @@ Report at the end with only a 1-3 sentence summary of what you changed
 ## Build, Test, and Development Commands
 
 - `uv sync`: Install dependencies from `uv.lock` (recommended local setup).
-- `uv run python moe-emergence/verify_gpt2_integration.py`: Run Phase 2 verification (10 comprehensive tests).
-- `uv run python moe-emergence/gpt2_inference.py --moe`: Interactive inference playground with routing stats.
-- `python moe-emergence/training_demo.py`: Run a small MoE training demo as a smoke test.
-- `ruff format moe-emergence/`: Auto-format code with Ruff.
-- `ruff check moe-emergence/`: Lint for style and correctness issues.
+- `uv run python moe_emergence/verify_gpt2_integration.py`: Run Phase 2 verification (10 comprehensive tests).
+- `uv run python moe_emergence/gpt2_inference.py --moe`: Interactive inference playground with routing stats.
+- `python moe_emergence/training_demo.py`: Run a small MoE training demo as a smoke test.
+- `ruff format moe_emergence/`: Auto-format code with Ruff.
+- `ruff check moe_emergence/`: Lint for style and correctness issues.
 
 ## Coding Style & Naming Conventions
 
@@ -89,7 +89,7 @@ Report at the end with only a 1-3 sentence summary of what you changed
 
 ## Testing Guidelines
 
-- There is no formal test suite yet. Use `python moe-emergence/training_demo.py` as the current sanity check.
+- There is no formal test suite yet. Use `python moe_emergence/training_demo.py` as the current sanity check.
 - If you add tests, place them under `tests/` and name files `test_*.py` (consider pytest if introducing automated tests).
 
 ## Commit & Pull Request Guidelines
@@ -184,7 +184,7 @@ These items require verification before implementation. Must not assume they are
 
 **Next Actions:**
 
-1. ~~Update `moe-emergence/data.py` with MathQA loader (from ZIP)~~ — **DONE**
+1. ~~Update `moe_emergence/data.py` with MathQA loader (from ZIP)~~ — **DONE**
 2. Verify train/eval split rationale — is the formula appropriate for our data sizes?
 3. Verify shuffle buffer rationale — is this heuristic justified?
 4. Run `uv run python sample_test.py` to inspect code/prose dataset samples

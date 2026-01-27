@@ -3,7 +3,7 @@ Ran git status -sb
 M .claude/settings.local.json
 … +3 lines
 ?? docs/PHASE-3-OPUS-CONVO.md
-?? moe-emergence/data.py
+?? moe_emergence/data.py
 
 • Explored
 └ List decisions
@@ -56,7 +56,7 @@ I'll incorporate the dataset meta helper into load_math_data, load_code_data, an
 and counts neatly. Then, I’ll update token counts after balancing in PackedMixedDomainDataset and clean up print
 statements to keep lines short and ASCII-only, while carefully patching the code in manageable steps.
 
-• Edited moe-emergence/data.py (+15 -0)
+• Edited moe_emergence/data.py (+15 -0)
 31
 32 +def \_dataset_meta(
 33 + dataset, dataset_name: str, split: str, config: Optional[str] = None
@@ -75,7 +75,7 @@ statements to keep lines short and ASCII-only, while carefully patching the code
 46 +
 47 def pack_sequences(
 
-• Edited moe-emergence/data.py (+9 -6)
+• Edited moe_emergence/data.py (+9 -6)
 126
 127 - info = {
 128 - "dataset": "codeparrot/codeparrot-clean",
@@ -94,7 +94,7 @@ statements to keep lines short and ASCII-only, while carefully patching the code
 135 + )
 136
 
-• Edited moe-emergence/data.py (+19 -17)
+• Edited moe_emergence/data.py (+19 -17)
 163 gsm8k = load_dataset("gsm8k", "main", split="train")
 164 + gsm8k_meta = \_dataset_meta(gsm8k, "gsm8k", "train", "main")
 165 gsm8k_count = 0
@@ -143,7 +143,7 @@ statements to keep lines short and ASCII-only, while carefully patching the code
 202 + "max_example_chars": max_example_chars,
 203 }
 
-• Edited moe-emergence/data.py (+11 -7)
+• Edited moe_emergence/data.py (+11 -7)
 241
 242 - info = {
 243 - "dataset": "Salesforce/wikitext",
@@ -165,11 +165,11 @@ statements to keep lines short and ASCII-only, while carefully patching the code
 252 + )
 253
 
-• Edited moe-emergence/data.py (+17 -3)
+• Edited moe*emergence/data.py (+17 -3)
 350 }
 351 + self.token_counts = {
-352 + "code": min_blocks _ block_size,
-353 + "math": min_blocks _ block_size,
+352 + "code": min_blocks * block*size,
+353 + "math": min_blocks * block_size,
 354 + "prose": min_blocks \* block_size,
 355 + }
 356
@@ -192,7 +192,7 @@ statements to keep lines short and ASCII-only, while carefully patching the code
 377 + )
 378
 
-• Edited moe-emergence/data.py (+25 -9)
+• Edited moe_emergence/data.py (+25 -9)
 452 )
 453 - print(f" Loaded {code_info['num_examples']} examples ({code_info['total_chars']:,} chars)")
 453 + print(
@@ -259,7 +259,7 @@ unts['prose']}")
 └ Search ✓|✅ in data.py
 Search .{89} in data.py
 
-• Ran perl -nle 'print $. if /[^\x00-\x7F]/' moe-emergence/data.py
+• Ran perl -nle 'print $. if /[^\x00-\x7F]/' moe_emergence/data.py
 └ (no output)
 
 • I'm walking through how dataset version and revision info is logged, considering whether we can or should log
@@ -288,7 +288,7 @@ IDs mitigates this
 M .claude/settings.local.json
 … +4 lines
 ?? docs/PHASE-3-OPUS-CONVO.md
-?? moe-emergence/data.py
+?? moe_emergence/data.py
 
 • Explored
 └ Read doc-fix.md
@@ -299,12 +299,12 @@ add a new code review doc, despite the extra effort. At the same time, I’m ide
 removing the unused self.tokenizer attribute in PackedMixedDomainDataset to tidy the code without affecting
 functionality. I'll plan to patch these coherent updates accordingly.
 
-• Edited moe-emergence/data.py (+0 -1)
+• Edited moe_emergence/data.py (+0 -1)
 284 self.block_size = block_size
 285 - self.tokenizer = tokenizer
 285
 
-• Edited moe-emergence/data.py (+1 -2)
+• Edited moe_emergence/data.py (+1 -2)
 465 )
 466 - if "gsm8k_count" in math_info:
 467 - print(f" GSM8K: {math_info['gsm8k_count']}, MATH: {math_info['math_count']}")
@@ -314,13 +314,14 @@ functionality. I'll plan to patch these coherent updates accordingly.
 • Explored
 └ Search .{89} in data.py
 
-• Ran perl -nle 'print $. if /[^\x00-\x7F]/' moe-emergence/data.py
+• Ran perl -nle 'print $. if /[^\x00-\x7F]/' moe_emergence/data.py
 └ (no output)
 
-• Ran git diff -- moe-emergence/data.py docs/decisions/005-phase3-data-sizing.md
+• Ran git diff -- moe_emergence/data.py docs/decisions/005-phase3-data-sizing.md
 └ diff --git a/docs/decisions/005-phase3-data-sizing.md b/docs/decisions/005-phase3-data-sizing.md
 index de49d4b..544162f 100644
 … +11 lines
+
 ---
 
 • Ran git status -sb
@@ -328,7 +329,7 @@ index de49d4b..544162f 100644
 M .claude/settings.local.json
 … +4 lines
 ?? docs/PHASE-3-OPUS-CONVO.md
-?? moe-emergence/data.py
+?? moe_emergence/data.py
 
 • I'm weighing whether to create a fix doc for the code changes since we updated data.py with a bug fix and design
 choice, though we already updated the decision doc; to be cautious, I consider adding a docs/code-reviews entry
@@ -343,7 +344,7 @@ yet.
 2 +
 3 +**Date:** 2025-12-26
 4 +**Context Commit:** `9137483`
-5 +**Component:** `moe-emergence/data.py`
+5 +**Component:** `moe_emergence/data.py`
 6 +
 7 +---
 8 +
@@ -381,7 +382,7 @@ yet.
 40 +
 41 +## Verification
 42 +
-43 +- Manual review of `moe-emergence/data.py` logic and output paths.
+43 +- Manual review of `moe_emergence/data.py` logic and output paths.
 44 +- No runtime test executed for this fix.
 45 +
 46 +---
@@ -405,7 +406,7 @@ consistency with the existing format. I'll prepare a patch to insert a new row f
 M .claude/settings.local.json
 … +6 lines
 ?? docs/code-reviews/005-2025-12-26-data-py-fix.md
-?? moe-emergence/data.py
+?? moe_emergence/data.py
 
 • I’m reviewing the new code review doc and deciding to add a small before/after code snippet section to better comply
 with instructions. This will highlight the token count update and try/except removal changes clearly in the doc.
@@ -445,7 +446,7 @@ with instructions. This will highlight the token count update and try/except rem
 71 +
 72 ## Verification
 
-• I’m gathering all the modifications made to moe-emergence/data.py and various docs to prepare a clear, detailed
+• I’m gathering all the modifications made to moe_emergence/data.py and various docs to prepare a clear, detailed
 summary for the user. I’m highlighting key changes like strict MATH dataset loading, improved token count accuracy,
 dataset metadata logging, ASCII-only output, and pad-token fixes. I plan to include explicit file references and
 reasoning, note untracked files, mention unchanged files from prior Opus changes, and suggest logical next steps such
@@ -457,7 +458,7 @@ overview capturing the essence of what was changed.
 • Aligned the Phase 3 data pipeline with the decision doc by fixing balanced token reporting, enforcing MATH loading
 when needed, and improving reproducibility metadata, while cleaning up output to match the ASCII policy.
 
-- moe-emergence/data.py: added dataset metadata logging (builder/version/config), removed the silent MATH fallback,
+- moe_emergence/data.py: added dataset metadata logging (builder/version/config), removed the silent MATH fallback,
   corrected token counts after balancing, tightened pad-token verification messaging, removed an unused attribute, and
   converted CLI status markers to ASCII.
 - docs/decisions/005-phase3-data-sizing.md: updated the risk note to reflect version/config logging rather than
@@ -470,8 +471,8 @@ Tests not run (dataset downloads required).
 
 Next steps:
 
-1. uv run python moe-emergence/data.py --size-mb 0.5 --block-size 256 to sanity-check the data pipeline.
-2. Stage/commit moe-emergence/data.py, docs/code-reviews/005-2025-12-26-data-py-fix.md, and the doc updates when
+1. uv run python moe_emergence/data.py --size-mb 0.5 --block-size 256 to sanity-check the data pipeline.
+2. Stage/commit moe_emergence/data.py, docs/code-reviews/005-2025-12-26-data-py-fix.md, and the doc updates when
    you’re ready.
 
 Summary: I fixed the post-balance token reporting bug, removed the MATH fallback to avoid silent underfilling, and

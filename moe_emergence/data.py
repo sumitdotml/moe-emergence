@@ -12,10 +12,10 @@ Key features:
 
 Usage:
     # Quick test
-    uv run python moe-emergence/data.py --size-mb 1
+    uv run python moe_emergence/data.py --size-mb 1
 
     # Full dataset with balancing
-    uv run python moe-emergence/data.py --size-mb 10 --balance-tokens
+    uv run python moe_emergence/data.py --size-mb 10 --balance-tokens
 
 See docs/decisions/005-phase3-data-sizing.md and `docs/DATA-PIPELINE.md` for design decisions.
 """

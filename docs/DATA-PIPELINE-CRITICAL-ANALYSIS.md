@@ -424,7 +424,7 @@ Run `sample_test.py` and evaluate:
 
 After investigations are complete, implement the data pipeline fixes.
 
-**File to modify**: `moe-emergence/data.py`
+**File to modify**: `moe_emergence/data.py`
 
 #### 2.1 Train/Eval Split (REQUIRED — HIGH severity)
 
@@ -514,7 +514,7 @@ These proposals came from the multi-model debate. They need independent verifica
 After implementing fixes:
 
 ```bash
-uv run python moe-emergence/data.py --size-mb 10 --block-size 512 --seed 42
+uv run python moe_emergence/data.py --size-mb 10 --block-size 512 --seed 42
 ```
 
 Expected output:

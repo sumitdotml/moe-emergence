@@ -5,9 +5,9 @@
 **Status:** Completed
 **Type:** Verification
 **Phase:** 2 (GPT-2 integration)
-**Commit:** `1b258ffa` (dirty; modified `moe-emergence/verify_gpt2_integration.py`)
-**Command:** `python moe-emergence/verify_gpt2_integration.py`
-**Script:** `moe-emergence/verify_gpt2_integration.py`
+**Commit:** `1b258ffa` (dirty; modified `moe_emergence/verify_gpt2_integration.py`)
+**Command:** `python moe_emergence/verify_gpt2_integration.py`
+**Script:** `moe_emergence/verify_gpt2_integration.py`
 
 ---
 
@@ -20,6 +20,7 @@ Verify GPT-2 integration of the MoE wrapper against the V3 spec before starting 
 ## Configuration
 
 ### Model
+
 ```yaml
 base_model: gpt2 (124M)
 moe_layers: [8, 9, 10, 11]
@@ -30,16 +31,19 @@ seed: 0
 ```
 
 ### Training
+
 ```yaml
 note: verification only (no training loop)
 ```
 
 ### Loss Coefficients
+
 ```yaml
 note: verification only (losses computed on aux outputs)
 ```
 
 ### Data
+
 ```yaml
 note: scripted prompts + random tokens for coverage checks
 ```
@@ -69,37 +73,37 @@ note: scripted prompts + random tokens for coverage checks
 
 | Layer | Relative Error | Status |
 | ----- | -------------- | ------ |
-| 8     | 0.0027     | PASS   |
-| 9     | 0.0026     | PASS   |
-| 10    | 0.0022     | PASS   |
-| 11    | 0.0021     | PASS   |
+| 8     | 0.0027         | PASS   |
+| 9     | 0.0026         | PASS   |
+| 10    | 0.0022         | PASS   |
+| 11    | 0.0021         | PASS   |
 
 ### Loss Checks
 
 | Layer | Load Balance Loss | Z Loss |
 | ----- | ----------------- | ------ |
-| 8     | 1.1305  | 4.3161 |
-| 9     | 1.1177  | 4.2913 |
-| 10    | 1.1271  | 4.3142 |
-| 11    | 1.0584  | 4.5191 |
+| 8     | 1.1305            | 4.3161 |
+| 9     | 1.1177            | 4.2913 |
+| 10    | 1.1271            | 4.3142 |
+| 11    | 1.0584            | 4.5191 |
 
 ### Router Gradient Norms (STE)
 
 | Layer | Gradient Norm |
 | ----- | ------------- |
-| 8     | 6.048797  |
-| 9     | 12.373333 |
-| 10    | 16.342945 |
-| 11    | 10.202866 |
+| 8     | 6.048797      |
+| 9     | 12.373333     |
+| 10    | 16.342945     |
+| 11    | 10.202866     |
 
 ### Noisy Routing Deltas
 
 | Layer | Mean \|noisy-clean\| |
-| ----- | ------------------- |
-| 8     | 9.06e-03           |
-| 9     | 9.80e-03           |
-| 10    | 1.01e-02           |
-| 11    | 1.14e-02           |
+| ----- | -------------------- |
+| 8     | 9.06e-03             |
+| 9     | 9.80e-03             |
+| 10    | 1.01e-02             |
+| 11    | 1.14e-02             |
 
 ### Attention Masking
 
@@ -159,5 +163,5 @@ Phase 2 integration verification passed (10/10 tests). Proceed to Phase 3 datase
 
 ## Artifacts
 
-- Script: `moe-emergence/verify_gpt2_integration.py`
+- Script: `moe_emergence/verify_gpt2_integration.py`
 - This log: `docs/experiments/run-001-gpt2-integration-verification.md`

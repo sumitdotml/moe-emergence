@@ -135,6 +135,6 @@ When writing the final report, pull from:
 
 **Next Steps:**
 
-1. Run `uv run python moe-emergence/data.py --size-mb 10 --block-size 512`
+1. Run `uv run python moe_emergence/data.py --size-mb 10 --block-size 512`
 2. Record token counts/blocks in `docs/DATA-PIPELINE.md`
 3. Phase 4: Training infrastructure

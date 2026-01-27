@@ -8,8 +8,8 @@
 
 ⏺ Now implementing data.py:
 
-⏺ Write(moe-emergence/data.py)
-⎿  Wrote 503 lines to moe-emergence/data.py
+⏺ Write(moe_emergence/data.py)
+⎿  Wrote 503 lines to moe_emergence/data.py
 """
 Dataset Preparation for MoE Training
 This module provides sequence packing and multi-domain dataset support for
@@ -17,15 +17,15 @@ training MoE models on code, math, and prose data.
 Key features: - Sequence packing (no padding, efficient training) - Token-based sizing with imbalance warnings - Optional token balancing via truncation
 … +493 lines (ctrl+o to expand)
 
-⏺ Bash(uv run python moe-emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
+⏺ Bash(uv run python moe_emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
 ⎿  Error: Exit code 1
 Traceback (most recent call last):
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 502, in <module>
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 502, in <module>
 main()
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 409, in main
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 409, in main
 code_texts, code_info = load_code_data(
 ^^^^^^^^^^^^^^^
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 97, in
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 97, in
 load_code_data
 from datasets import load_dataset
 ModuleNotFoundError: No module named 'datasets'
@@ -39,27 +39,27 @@ Downloading pandas (10.2MiB)
 Downloading pyarrow (32.6MiB)
 … +29 lines (ctrl+o to expand)
 
-⏺ Bash(uv run python moe-emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
+⏺ Bash(uv run python moe_emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
 ⎿  Error: Exit code 1
 Generating train split: 0%| | 0/7473 [00:00<?, ? examples/s]
 split: 100%|██████████| 7473/7473 [00:00<00:00, 558518.06 examples/s]
 Generating test split: 0%| | 0/1319 [00:00<?, ? examples/s]
 100%|██████████| 1319/1319 [00:00<00:00, 519854.07 examples/s]
 Traceback (most recent call last):
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 502, in <module>
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 502, in <module>
 main()
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 425, in main
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 425, in main
 prose_texts, prose_info = load_prose_data(
 ^^^^^^^^^^^^^^^^
-File "/Users/sumit/playground/moe-emergence/moe-emergence/data.py", line 207, in
+File "/Users/sumit/playground/moe_emergence/moe_emergence/data.py", line 207, in
 load_prose_data
 … +28 lines (ctrl+o to see all)
 ⎿  Found 5 new diagnostic issues in 1 file (ctrl+o to expand)
 
 ⏺ OpenWebText has a compatibility issue. Let me use WikiText as an alternative and fix the linting warnings:
 
-⏺ Update(moe-emergence/data.py)
-⎿  Updated moe-emergence/data.py with 1 removal
+⏺ Update(moe_emergence/data.py)
+⎿  Updated moe_emergence/data.py with 1 removal
 25 from typing import Optional
 26
 27 import torch
@@ -68,8 +68,8 @@ load_prose_data
 29 from transformers import GPT2TokenizerFast
 30
 
-⏺ Update(moe-emergence/data.py)
-⎿  Updated moe-emergence/data.py with 7 additions and 4 removals
+⏺ Update(moe_emergence/data.py)
+⎿  Updated moe_emergence/data.py with 7 additions and 4 removals
 191 min_example_chars: int = 200,
 192 ) -> tuple[list[str], dict]:
 193 """
@@ -106,8 +106,8 @@ load_prose_data
 225 "num_examples": len(texts),
 226 "total_chars": total_chars,
 
-⏺ Update(moe-emergence/data.py)
-⎿  Updated moe-emergence/data.py with 1 addition and 1 removal
+⏺ Update(moe_emergence/data.py)
+⎿  Updated moe_emergence/data.py with 1 addition and 1 removal
 331 random.shuffle(self.blocks)
 332
 333 # Report final stats
@@ -118,8 +118,8 @@ load_prose_data
 337 print(f" Code: {self.block_counts['code']} blocks
 ({self.token_counts['code']:,} tokens)")
 
-⏺ Update(moe-emergence/data.py)
-⎿  Updated moe-emergence/data.py with 1 addition and 1 removal
+⏺ Update(moe_emergence/data.py)
+⎿  Updated moe_emergence/data.py with 1 addition and 1 removal
 399 )
 400 args = parser.parse_args()
 401
@@ -129,12 +129,12 @@ load_prose_data
 404
 405 print(f"\n{'='\*60}")
 
-⏺ Search(pattern: "print\(f"", path: "moe-emergence/data.py", output_mode: "content")
+⏺ Search(pattern: "print\(f"", path: "moe_emergence/data.py", output_mode: "content")
 ⎿  Found 30 lines (ctrl+o to expand)
 
 ⏺ The remaining warnings appear to be false positives - those f-strings do have placeholders. Let me run the test:
 
-⏺ Bash(uv run python moe-emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
+⏺ Bash(uv run python moe_emergence/data.py --size-mb 0.5 --block-size 256) timeout: 5m 0s
 ⎿  Loading tokenizer...
 
      ============================================================
@@ -142,7 +142,7 @@ load_prose_data
 
 ⏺ Test passes. Let me verify the --balance-tokens flag works:
 
-⏺ Bash(uv run python moe-emergence/data.py --size-mb 0.5 --block-size 256 --balance-tokens)
+⏺ Bash(uv run python moe_emergence/data.py --size-mb 0.5 --block-size 256 --balance-tokens)
 ⎿  Loading tokenizer...
 
      ============================================================
@@ -213,7 +213,7 @@ Files Created/Modified
 
 | File                                     | Status                                        |
 | ---------------------------------------- | --------------------------------------------- |
-| moe-emergence/data.py                    | New - sequence packing + multi-domain dataset |
+| moe_emergence/data.py                    | New - sequence packing + multi-domain dataset |
 | docs/decisions/005-phase3-data-sizing.md | New - design decision doc                     |
 | README.md                                | Updated - Phase 3 marked done                 |
 | pyproject.toml / uv.lock                 | Updated - added datasets dependency           |

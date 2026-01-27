@@ -43,7 +43,7 @@ Provide: config, results, observations, cost.
 
 ### Before Major Training Runs
 ```
-/doc-review moe-emergence/moe.py
+/doc-review moe_emergence/moe.py
 ```
 Ensures code matches V3 spec.
 
