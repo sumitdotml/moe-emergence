@@ -502,8 +502,8 @@ These proposals came from the multi-model debate. They need independent verifica
 
 | Line | Issue | Fix Required | Status |
 |------|-------|--------------|--------|
-| 140-205 | Uses GSM8K + `hendrycks/competition_math` | Replace with MathQA from ZIP | **BLOCKING** — dataset is DMCA'd |
-| N/A | No train/eval split | Add text-level split before packing | **BLOCKING** — HIGH severity |
+| 140-205 | Uses GSM8K + `hendrycks/competition_math` | Replace with MathQA from ZIP | **RESOLVED** — MathQA loader implemented |
+| N/A | No train/eval split | Add text-level split before packing | **RESOLVED** — `split_texts_for_eval()` added |
 | 113 | No shuffle buffer for CodeParrot | TBD after investigation | Pending |
 | — | Fixed prefixes | No prefixes for MathQA | **RESOLVED** — see decision 007 |
 

@@ -34,6 +34,44 @@ REPO_ROOT = Path(__file__).parent.parent
 CACHE_DIR = REPO_ROOT / ".cache"
 
 
+def compute_eval_count(n_texts: int) -> int:
+    """
+    Computes number of texts to hold out for evaluation.
+
+    Formula: min(max(10, int(n * 0.05)), int(n * 0.10))
+    - At least 10 texts (for statistical reliability)
+    - Target 5% of texts
+    - Capped at 10% (to protect small domains)
+
+    See docs/decisions/008-text-level-validation-split.md for rationale.
+    """
+    return min(max(10, int(n_texts * 0.05)), int(n_texts * 0.10))
+
+
+def split_texts_for_eval(texts: list[str], seed: int) -> tuple[list[str], list[str]]:
+    """
+    Splits texts into train and eval sets at the text level.
+
+    IMPORTANT: This must happen BEFORE packing to avoid document leakage.
+    If we split after packing, the same document could span train and eval blocks.
+
+    Args:
+        texts: List of text strings
+        seed: Random seed for reproducible shuffling
+
+    Returns:
+        Tuple of (train_texts, eval_texts) with no overlap
+    """
+    texts = list(texts)  # copy to avoid mutating input
+    random.Random(seed).shuffle(texts)
+
+    n_eval = compute_eval_count(len(texts))
+    eval_texts = texts[:n_eval]
+    train_texts = texts[n_eval:]
+
+    return train_texts, eval_texts
+
+
 def _dataset_meta(
     dataset, dataset_name: str, split: str, config: Optional[str] = None
 ) -> dict:
@@ -493,7 +531,7 @@ def main():
     tokenizer = GPT2TokenizerFast.from_pretrained("gpt2", cache_dir=str(hf_cache))
 
     print(f"\n{'=' * 60}")
-    print(f"Loading datasets (target: {args.size_mb}MB per domain)")
+    print(f"Loading datasets (target: {args.size_mb}MB per domain, pre-split)")
     print(f"{'=' * 60}\n")
 
     # loading all domains
@@ -527,17 +565,50 @@ def main():
         f"({prose_info['total_chars']:,} chars)"
     )
 
+    # gotta split each domain into train/eval at text level before packing
     print(f"\n{'=' * 60}")
-    print("Creating packed dataset")
+    print("Splitting texts into train/eval (text-level, before packing)")
     print(f"{'=' * 60}\n")
 
-    dataset = PackedMixedDomainDataset(
-        code_texts=code_texts,
-        math_texts=math_texts,
-        prose_texts=prose_texts,
+    code_train, code_eval = split_texts_for_eval(code_texts, args.seed)
+    math_train, math_eval = split_texts_for_eval(math_texts, args.seed)
+    prose_train, prose_eval = split_texts_for_eval(prose_texts, args.seed)
+
+    print(f"Code:  {len(code_train):,} train / {len(code_eval):,} eval texts")
+    print(f"Math:  {len(math_train):,} train / {len(math_eval):,} eval texts")
+    print(f"Prose: {len(prose_train):,} train / {len(prose_eval):,} eval texts")
+
+    # verifying for possible train/eval leakage
+    assert len(set(code_train) & set(code_eval)) == 0, "Code train/eval overlap!"
+    assert len(set(math_train) & set(math_eval)) == 0, "Math train/eval overlap!"
+    assert len(set(prose_train) & set(prose_eval)) == 0, "Prose train/eval overlap!"
+    print("\n[OK] No train/eval text overlap (leakage check passed)")
+
+    print(f"\n{'=' * 60}")
+    print("Creating packed TRAIN dataset")
+    print(f"{'=' * 60}\n")
+
+    train_dataset = PackedMixedDomainDataset(
+        code_texts=code_train,
+        math_texts=math_train,
+        prose_texts=prose_train,
         tokenizer=tokenizer,
         block_size=args.block_size,
         balance_tokens=args.balance_tokens,
+        seed=args.seed,
+    )
+
+    print(f"\n{'=' * 60}")
+    print("Creating packed EVAL dataset")
+    print(f"{'=' * 60}\n")
+
+    eval_dataset = PackedMixedDomainDataset(
+        code_texts=code_eval,
+        math_texts=math_eval,
+        prose_texts=prose_eval,
+        tokenizer=tokenizer,
+        block_size=args.block_size,
+        balance_tokens=False,  # never balance eval
         seed=args.seed,
     )
 
@@ -547,7 +618,7 @@ def main():
     print(f"{'=' * 60}\n")
 
     # checking block sizes
-    sample = dataset[0]
+    sample = train_dataset[0]
     assert sample["input_ids"].shape == (args.block_size,), (
         f"Block size mismatch: {sample['input_ids'].shape} != ({args.block_size},)"
     )
@@ -559,28 +630,16 @@ def main():
         print("[OK] Pad token id is None; skipping pad-token check")
     else:
         has_padding = any(
-            (dataset[i]["input_ids"] == pad_token_id).any()
-            for i in range(min(100, len(dataset)))
+            (train_dataset[i]["input_ids"] == pad_token_id).any()
+            for i in range(min(100, len(train_dataset)))
         )
         assert not has_padding, "Found padding tokens in dataset!"
         print("[OK] No padding tokens")
 
-    # checking domain distribution
-    domain_counts = {"code": 0, "math": 0, "prose": 0}
-    for i in range(len(dataset)):
-        domain_counts[dataset[i]["domain"]] += 1
-
-    print(
-        "[OK] Domain distribution: "
-        f"code={domain_counts['code']}, "
-        f"math={domain_counts['math']}, "
-        f"prose={domain_counts['prose']}"
-    )
-
     # testing collate function
     from torch.utils.data import DataLoader
 
-    loader = DataLoader(dataset, batch_size=4, collate_fn=collate_packed)
+    loader = DataLoader(train_dataset, batch_size=4, collate_fn=collate_packed)
     batch = next(iter(loader))
     assert batch["input_ids"].shape == (4, args.block_size), (
         f"Batch shape mismatch: {batch['input_ids'].shape}"
@@ -589,19 +648,26 @@ def main():
     print("[OK] Collate function works")
 
     print(f"\n{'=' * 60}")
-    print("Dataset info (for reproducibility)")
+    print("Summary (for reproducibility)")
     print(f"{'=' * 60}\n")
 
-    print(f"Code: {code_info}")
-    print(f"Math: {math_info}")
-    print(f"Prose: {prose_info}")
-    print(f"\nSeed: {args.seed}")
+    print(f"Seed: {args.seed}")
     print(f"Block size: {args.block_size}")
-    print(f"Balance tokens: {args.balance_tokens}")
+    print(f"Balance tokens (train): {args.balance_tokens}")
+    print()
+    print("Text counts (pre-packing):")
+    print(f"  Code:  {len(code_train):,} train / {len(code_eval):,} eval")
+    print(f"  Math:  {len(math_train):,} train / {len(math_eval):,} eval")
+    print(f"  Prose: {len(prose_train):,} train / {len(prose_eval):,} eval")
+    print()
+    print("Block counts (post-packing):")
+    print(f"  Train: {len(train_dataset):,} blocks")
+    print(f"  Eval:  {len(eval_dataset):,} blocks")
 
-    print("\n[OK] Dataset ready for training.")
-    print(f"   Total blocks: {len(dataset)}")
-    print(f"   Estimated steps (batch=8, 1 epoch): {len(dataset) // 8}")
+    print("\n[OK] Datasets ready for training.")
+    print(f"   Train blocks: {len(train_dataset)}")
+    print(f"   Eval blocks:  {len(eval_dataset)}")
+    print(f"   Example: ~{len(train_dataset) // 8} steps if batch_size=8, 1 epoch")
 
 
 if __name__ == "__main__":

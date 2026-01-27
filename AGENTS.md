@@ -172,7 +172,7 @@ All issues from code reviews have been fixed:
 
 | Issue                     | Severity | Status                                           |
 | ------------------------- | -------- | ------------------------------------------------ |
-| Train/eval leakage        | **HIGH** | Needs fix: split at TEXT level BEFORE packing    |
+| Train/eval leakage        | ~~HIGH~~ | **DONE** — text-level split in `data.py`         |
 | Math dataset              | ~~HIGH~~ | **DONE** — MathQA loader implemented in `data.py`|
 | Code/Prose dataset choice | MEDIUM   | Run sample test to verify quality                |
 
@@ -189,7 +189,7 @@ These items require verification before implementation. Must not assume they are
 
 | Item                     | What Needs Investigation                                          | Status   |
 | ------------------------ | ----------------------------------------------------------------- | -------- |
-| Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **TODO** |
+| Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **DONE** — uses Decision 008 formula |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **TODO** |
 | Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **TODO** |
 | Prose dataset            | WikiText-103 vs OpenWebText — verify samples                      | **TODO** |
@@ -197,11 +197,11 @@ These items require verification before implementation. Must not assume they are
 **Next Actions:**
 
 1. ~~Update `moe_emergence/data.py` with MathQA loader (from ZIP)~~ — **DONE**
-2. Verify train/eval split rationale — is the formula appropriate for our data sizes?
-3. Verify shuffle buffer rationale — is this heuristic justified?
-4. Run `uv run python sample_test.py` to inspect code/prose dataset samples
-5. Implement train/eval split in `data.py`
-6. Run verification and confirm no train/eval leakage
+2. ~~Verify train/eval split rationale~~ — **DONE** (uses `min(max(10, n*0.05), n*0.10)`)
+3. ~~Implement train/eval split in `data.py`~~ — **DONE**
+4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
+5. Verify code/prose dataset samples — run `uv run python sample_test.py`
+6. Verify shuffle buffer rationale — is this heuristic justified?
 
 ## Budget Constraint
 
