@@ -1,6 +1,12 @@
+---
+name: doc-paper
+description: Create literature notes for a paper. Use when the user mentions a paper, asks about a research paper, or wants to document a paper for citation.
+---
+
 Create literature notes for a paper. User provides paper title, link, or key details.
 
-Instructions:
+## Instructions
+
 1. Read the template at `docs/literature/_TEMPLATE.md`
 2. If user provides a URL, fetch the paper abstract/content if accessible
 3. Create literature notes including:

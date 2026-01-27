@@ -1,6 +1,12 @@
+---
+name: doc-decision
+description: Document a design decision. Use when the user makes a choice between options, decides on an architecture, or selects a specific approach over alternatives.
+---
+
 Document a design decision. The user will describe what choice was made and why.
 
-Instructions:
+## Instructions
+
 1. Read the template at `docs/decisions/_TEMPLATE.md`
 2. Ask clarifying questions if the decision context is unclear
 3. Determine the next decision number by listing existing files in `docs/decisions/`

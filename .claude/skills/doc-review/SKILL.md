@@ -1,6 +1,13 @@
+---
+name: doc-review
+description: Perform a code review on specified file(s) against the V3 design spec.
+disable-model-invocation: true
+---
+
 Perform a code review on specified file(s) against the V3 design spec.
 
-Instructions:
+## Instructions
+
 1. Read the file(s) to review
 2. Read `project-design/MOE-PROJECT-DESIGN-V3.md` as the reference spec
 3. Get current git commit hash

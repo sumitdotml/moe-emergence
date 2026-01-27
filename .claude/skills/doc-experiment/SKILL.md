@@ -1,6 +1,12 @@
+---
+name: doc-experiment
+description: Document a training run or experiment. Use when the user completes a training run, reports experiment results, or shares metrics from a model run.
+---
+
 Document a training run or experiment. The user will describe what they ran.
 
-Instructions:
+## Instructions
+
 1. Read the template at `docs/experiments/_TEMPLATE.md`
 2. Gather the following information (ask if not provided):
    - Run objective (what question is this answering?)

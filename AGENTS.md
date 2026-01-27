@@ -8,16 +8,18 @@ This file provides context and workflows for AI coding assistants working on thi
 
 This project maintains rigorous documentation for a technical report. **Every significant action should be documented.**
 
-## Quick Commands
+## Skills
 
-| Command           | Purpose                     | Example                                         |
-| ----------------- | --------------------------- | ----------------------------------------------- |
-| `/doc-decision`   | Log a design choice         | `/doc-decision chose top-1 routing over top-2`  |
-| `/doc-experiment` | Log a training run          | `/doc-experiment completed main MoE run`        |
-| `/doc-review`     | Code review against V3 spec | `/doc-review moe_emergence/moe.py`              |
-| `/doc-paper`      | Add literature notes        | `/doc-paper Switch Transformer Fedus 2021`      |
-| `/doc-fix`        | Document a bug fix          | `/doc-fix fixed gradient flow in top-1 routing` |
-| `/doc-status`     | Project status summary      | `/doc-status`                                   |
+Documentation skills live in `.claude/skills/`. Claude will auto-invoke some of these when relevant (e.g., when you make a design choice), or you can invoke them directly with `/skill-name`.
+
+| Skill             | Purpose                     | Example                                         | Auto-invoke |
+| ----------------- | --------------------------- | ----------------------------------------------- | ----------- |
+| `/doc-decision`   | Log a design choice         | `/doc-decision chose top-1 routing over top-2`  | Yes         |
+| `/doc-experiment` | Log a training run          | `/doc-experiment completed main MoE run`        | Yes         |
+| `/doc-fix`        | Document a bug fix          | `/doc-fix fixed gradient flow in top-1 routing` | Yes         |
+| `/doc-paper`      | Add literature notes        | `/doc-paper Switch Transformer Fedus 2021`      | Yes         |
+| `/doc-review`     | Code review against V3 spec | `/doc-review moe_emergence/moe.py`              | No          |
+| `/doc-status`     | Project status summary      | `/doc-status`                                   | No          |
 
 ## When to Document
 
@@ -30,9 +32,19 @@ This project maintains rigorous documentation for a technical report. **Every si
 | Read a paper you'll cite             | `/doc-paper`      | MEDIUM   |
 | Starting a new session               | `/doc-status`     | MEDIUM   |
 
-## Documentation Structure
+## Directory Structure
 
 ```
+.claude/
+├── settings.local.json
+└── skills/                   # Documentation skills
+    ├── doc-decision/
+    ├── doc-experiment/
+    ├── doc-fix/
+    ├── doc-paper/
+    ├── doc-review/
+    └── doc-status/
+
 docs/
 ├── README.md                 # Index
 ├── code-reviews/             # Code reviews with commit hashes

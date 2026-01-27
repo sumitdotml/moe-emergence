@@ -1,6 +1,12 @@
+---
+name: doc-fix
+description: Document a bug fix or issue resolution. Use when the user fixes a bug, resolves an issue, or corrects a problem in the codebase.
+---
+
 Document a bug fix or issue resolution.
 
-Instructions:
+## Instructions
+
 1. Get the current git commit hash (post-fix state)
 2. Ask for or identify:
    - What was the bug/issue?

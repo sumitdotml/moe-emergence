@@ -1,6 +1,13 @@
+---
+name: doc-status
+description: Generate a status report of the project documentation and implementation state.
+disable-model-invocation: true
+---
+
 Generate a status report of the project documentation and implementation state.
 
-Instructions:
+## Instructions
+
 1. List all files in `docs/` and summarize what's documented
 2. Check git status for uncommitted changes
 3. Read `README.md` progress checklist and report what's done vs pending
