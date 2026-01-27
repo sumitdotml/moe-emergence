@@ -1,8 +1,11 @@
 """
 Dataset sample testing script.
 
-Run this BEFORE implementing data pipeline changes to verify dataset quality
-and make informed decisions about code/prose dataset choices.
+NOTE: This code was generated automatically with the help of Claude Opus 4.5. I have not verified the quality of the code myself since I only required this to verify the dataset quality.
+
+This was run before implementing data pipeline changes to verify dataset quality
+and make informed decisions about code/prose dataset choices. I did not need to verify
+the math dataset because it was already verified in docs/decisions/007-math-prefix-randomization.md.
 
 Usage: uv run python sample_test.py
 """
@@ -11,12 +14,14 @@ import random
 
 from datasets import load_dataset
 
+from moe_emergence.data import _download_mathqa
+
 print("=" * 80)
 print("DATASET SAMPLE TESTING - ALL THREE DOMAINS")
 print("=" * 80)
 
 
-# ::: CODE OPTIONS :::
+# CODE OPTIONS
 
 print("\n" + "=" * 80)
 print("### CODE Option 1: CodeParrot-clean ###")
@@ -41,21 +46,22 @@ for i, sample in enumerate(code_ds):
 #     print(sample['content'][:1000])
 #     print()
 
-# ::: MATH (MathQA) :::
+# MATH (MathQA)
 
 print("\n" + "=" * 80)
-print("### MATH: MathQA (DECIDED) ###")
+print("### MATH: MathQA ###")
 print("=" * 80 + "\n")
-math_ds = load_dataset("allenai/math_qa", split="train")
-for i in random.sample(range(len(math_ds)), 5):
-    sample = math_ds[i]
+
+math_samples = _download_mathqa()
+for i in random.sample(range(len(math_samples)), 5):
+    sample = math_samples[i]
     print("--- Math Sample ---")
     print(f"Problem: {sample['Problem']}")
     print(f"Rationale: {sample['Rationale'][:500]}")
     print("\n" + "-" * 40 + "\n")
 
 
-# ::: PROSE OPTIONS :::
+# PROSE OPTIONS
 
 print("\n" + "=" * 80)
 print("### PROSE Option 1: WikiText-103 ###")
@@ -83,7 +89,7 @@ for i, sample in enumerate(owt_ds):
     print(sample["text"][:800])
     print("\n" + "-" * 40 + "\n")
 
-# ::: SUMMARY :::
+# SUMMARY
 
 print("\n" + "=" * 80)
 print("DECISIONS NEEDED:")
@@ -101,3 +107,6 @@ print(
 3. MATH: MathQA already decided (29K natural language word problems)
 """
 )
+
+# explicit cleanup to avoid hanging on streaming dataset connections
+del code_ds, owt_ds, wiki_ds
