@@ -298,7 +298,10 @@ def load_prose_data(
     min_example_chars: int = 200,
 ) -> tuple[list[str], dict]:
     """
-    Load prose text from WikiText-103.
+    Loads prose text from AllenAI C4 (English).
+
+    C4 is a cleaned version of Common Crawl with natural web text.
+    See docs/decisions/010-dataset-choices.md for rationale.
 
     Args:
         max_size_mb: Target size in MB (character-based approximation)
@@ -310,12 +313,11 @@ def load_prose_data(
     """
     from datasets import load_dataset
 
-    hf_cache = CACHE_DIR / "huggingface"
     ds = load_dataset(
-        "Salesforce/wikitext",
-        "wikitext-103-raw-v1",
+        "allenai/c4",
+        "en",
         split="train",
-        cache_dir=str(hf_cache),
+        streaming=True,
     )
 
     texts = []
@@ -326,20 +328,19 @@ def load_prose_data(
         if total_chars >= max_chars:
             break
         text = sample["text"]
-        # skipping empty lines and very short texts
         if text and min_example_chars < len(text) < max_example_chars:
             texts.append(text)
             total_chars += len(text)
 
-    info = _dataset_meta(ds, "Salesforce/wikitext", "train", "wikitext-103-raw-v1")
-    info.update(
-        {
-            "num_examples": len(texts),
-            "total_chars": total_chars,
-            "min_example_chars": min_example_chars,
-            "max_example_chars": max_example_chars,
-        }
-    )
+    info = {
+        "dataset": "allenai/c4",
+        "config": "en",
+        "split": "train",
+        "num_examples": len(texts),
+        "total_chars": total_chars,
+        "min_example_chars": min_example_chars,
+        "max_example_chars": max_example_chars,
+    }
 
     return texts, info
 
