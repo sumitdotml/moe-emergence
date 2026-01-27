@@ -27,7 +27,7 @@ Usage:
 import argparse
 
 import torch
-from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+from transformers import AutoTokenizer, GPT2LMHeadModel
 
 
 def main():
@@ -110,7 +110,7 @@ def main():
 
     print("\nLoading model...")
     model = GPT2LMHeadModel.from_pretrained("gpt2")
-    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
     tokenizer.pad_token = tokenizer.eos_token
 
     # handling MoE: either load checkpoint or install fresh
@@ -149,7 +149,7 @@ def main():
         total_params = sum(p.numel() for p in model.parameters())
         print(f"Total parameters: {total_params:,} (~{total_params / 1e6:.1f}M)")
 
-    model.to(device)
+    model = model.to(device)  # type: ignore[arg-type]
     model.eval()
 
     gen_config = {
@@ -198,6 +198,7 @@ def main():
         print("=" * 60)
 
         # running one more forward pass to get aux outputs
+        assert moe_modules is not None
         with torch.no_grad():
             _ = model(**inputs)
         aux_outputs = collect_aux_outputs(moe_modules)
