@@ -27,7 +27,7 @@ from typing import Optional
 
 import torch
 from torch.utils.data import Dataset
-from transformers import GPT2TokenizerFast
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 
 # all data cached in .cache/ at repository root
 REPO_ROOT = Path(__file__).parent.parent
@@ -89,7 +89,7 @@ def _dataset_meta(
 
 def pack_sequences(
     texts: list[str],
-    tokenizer: GPT2TokenizerFast,
+    tokenizer: PreTrainedTokenizerBase,
     block_size: int = 512,
     domain_label: Optional[str] = None,
 ) -> tuple[list[dict], int]:
@@ -105,7 +105,7 @@ def pack_sequences(
 
     Args:
         texts: List of text strings
-        tokenizer: GPT2TokenizerFast
+        tokenizer: PreTrainedTokenizerBase
         block_size: Size of each training block (default 512)
         domain_label: Domain label for all texts (e.g., 'code', 'math', 'prose')
 
@@ -356,7 +356,7 @@ class PackedMixedDomainDataset(Dataset):
         code_texts: List of code text samples
         math_texts: List of math text samples
         prose_texts: List of prose text samples
-        tokenizer: GPT2TokenizerFast
+        tokenizer: PreTrainedTokenizerBase
         block_size: Tokens per block (default 512)
         balance_tokens: If True, truncate larger domains to match smallest
         seed: Random seed for reproducible shuffling
@@ -367,7 +367,7 @@ class PackedMixedDomainDataset(Dataset):
         code_texts: list[str],
         math_texts: list[str],
         prose_texts: list[str],
-        tokenizer: GPT2TokenizerFast,
+        tokenizer: PreTrainedTokenizerBase,
         block_size: int = 512,
         balance_tokens: bool = False,
         seed: int = 42,
@@ -409,7 +409,7 @@ class PackedMixedDomainDataset(Dataset):
         max_tokens = max(counts)
 
         if max_tokens > 1.5 * min_tokens:
-            min_domain = min(self.token_counts, key=self.token_counts.get)
+            min_domain = min(self.token_counts, key=lambda k: self.token_counts[k])
             print(
                 f"\nWarning: Token imbalance detected (>1.5x ratio)!"
                 f"\n  Smallest: {min_domain} with {min_tokens:,} tokens"
@@ -529,7 +529,7 @@ def main():
 
     print("Loading tokenizer...")
     hf_cache = CACHE_DIR / "huggingface"
-    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2", cache_dir=str(hf_cache))
+    tokenizer = AutoTokenizer.from_pretrained("gpt2", cache_dir=str(hf_cache))
 
     print(f"\n{'=' * 60}")
     print(f"Loading datasets (target: {args.size_mb}MB per domain, pre-split)")
