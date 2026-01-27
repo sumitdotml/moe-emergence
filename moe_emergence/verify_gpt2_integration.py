@@ -24,7 +24,7 @@ Usage:
 from __future__ import annotations
 
 import torch
-from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+from transformers import AutoTokenizer, GPT2LMHeadModel
 
 from gpt2_moe import (
     MoEWrapper,
@@ -60,7 +60,8 @@ def _capture_mlp_io(
         return hook
 
     for layer_idx in layer_indices:
-        mlp = model.transformer.h[layer_idx].mlp
+        block = model.transformer.h[layer_idx]
+        mlp = getattr(block, "mlp")
         handles.append(mlp.register_forward_hook(make_hook(layer_idx)))
 
     with torch.no_grad():
@@ -396,8 +397,10 @@ def test_generation(model: GPT2LMHeadModel, tokenizer, device: torch.device) -> 
             max_new_tokens=20,
             do_sample=False,
             pad_token_id=tokenizer.eos_token_id,
+            return_dict_in_generate=False,  # explicit for type checker (returns Tensor)
         )
 
+    assert isinstance(generated, torch.Tensor)
     assert generated.shape[1] > inputs["input_ids"].shape[1], (
         "Generation produced no new tokens"
     )
@@ -476,7 +479,7 @@ def main() -> None:
 
     print("\nLoading GPT-2...")
     model = GPT2LMHeadModel.from_pretrained("gpt2")
-    tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
     tokenizer.pad_token = tokenizer.eos_token
     model.config.pad_token_id = tokenizer.pad_token_id
 
@@ -487,7 +490,9 @@ def main() -> None:
 
     base_total_params = sum(p.numel() for p in model.parameters())
     base_mlp_params = {
-        idx: sum(p.numel() for p in model.transformer.h[idx].mlp.parameters())
+        idx: sum(
+            p.numel() for p in getattr(model.transformer.h[idx], "mlp").parameters()
+        )
         for idx in moe_layers
     }
 
