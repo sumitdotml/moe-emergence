@@ -53,9 +53,14 @@ More will be added as I continue to develop this project.
 
 Datasets are downloaded at runtime from Hugging Face and are not redistributed with this project.
 
-### Verified
+#### CodeParrot-clean (Code Domain)
 
-#### MathQA
+- **License:** No explicit dataset license; per-file licenses from source GitHub repos
+- **Source:** https://huggingface.co/datasets/codeparrot/codeparrot-clean
+- **Usage:** Code domain training data
+- **Note:** Deduplicated Python files from GitHub; each file has a `license` field indicating its original license
+
+#### MathQA (Math Domain)
 
 - **License:** Apache License 2.0
 - **Copyright:** Allen Institute for AI
@@ -63,20 +68,14 @@ Datasets are downloaded at runtime from Hugging Face and are not redistributed w
 - **Paper:** Amini et al., "MathQA: Towards Interpretable Math Word Problem Solving" (2019)
 - **Usage:** Math domain training data
 
-### Pending Investigation
+#### C4 (Prose Domain)
 
-The following datasets are candidates under evaluation. Final choices will be documented after I do
-some sample verification.
-
-#### Code Domain (one of)
-
-- **CodeParrot-clean** (`codeparrot/codeparrot-clean`) - Mixed licenses per file
-- **StarCoderData** (`bigcode/starcoderdata`) - Requires TOS acceptance
-
-#### Prose Domain (one of)
-
-- **WikiText-103** (`Salesforce/wikitext`) - CC BY-SA 3.0 / GFDL
-- **OpenWebText** (`Skylion007/openwebtext`) - CC0
+- **License:** ODC-BY (Open Data Commons Attribution License)
+- **Copyright:** Allen Institute for AI
+- **Source:** https://huggingface.co/datasets/allenai/c4
+- **Paper:** Raffel et al., "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer" (2020)
+- **Usage:** Prose domain training data (English subset)
+- **Note:** Also bound by Common Crawl terms of use
 
 ---
 
@@ -145,6 +144,4 @@ The full text of referenced licenses can be found at:
 - **MIT License:** https://opensource.org/licenses/MIT
 - **BSD-3-Clause:** https://opensource.org/licenses/BSD-3-Clause
 - **Apache License 2.0:** https://www.apache.org/licenses/LICENSE-2.0
-- **CC BY-SA 3.0:** https://creativecommons.org/licenses/by-sa/3.0/
-- **CC0:** https://creativecommons.org/publicdomain/zero/1.0/
-- **GFDL:** https://www.gnu.org/licenses/fdl-1.3.html
+- **ODC-BY:** https://opendatacommons.org/licenses/by/1-0/
