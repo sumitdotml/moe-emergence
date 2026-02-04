@@ -194,7 +194,7 @@ These items require verification before implementation. Must not assume they are
 | Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **DONE** — uses Decision 008 formula |
 | Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **DONE** — CodeParrot-clean          |
 | Prose dataset            | WikiText-103 vs OpenWebText vs C4 vs FineWeb — verify samples     | **DONE** — AllenAI C4 (en)           |
-| Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **TODO** — see MMLU-Pro issue        |
+| Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011          |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **TODO**                             |
 
 **Next Actions:**
@@ -204,7 +204,7 @@ These items require verification before implementation. Must not assume they are
 3. ~~Implement train/eval split in `data.py`~~ — **DONE**
 4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
 5. ~~Verify code/prose dataset samples~~ — **DONE** (decision 010)
-6. Check datasets for formatting artifacts (whitespace, invisible chars) — see MMLU-Pro issue below
+6. ~~Check datasets for formatting artifacts (whitespace, invisible chars)~~ — **DONE** (decision 011)
 7. Verify shuffle buffer rationale — is this heuristic justified?
 8. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
 
