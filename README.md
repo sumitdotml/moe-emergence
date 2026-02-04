@@ -117,6 +117,13 @@ Even with auxiliary load balancing loss, real-world data distributions can still
 
 ## Quick Start
 
+### Setup
+
+```bash
+uv sync                  # install dependencies
+uv pip install -e .      # install package (enables imports)
+```
+
 ### Inference Playground
 
 Can play with GPT-2 generation (vanilla or MoE):
