@@ -1,7 +1,7 @@
 ---
 name: coding-principles
 description: Behavioral guidelines to reduce common LLM coding mistakes. Emphasizes thinking before coding, simplicity, surgical changes, and goal-driven execution. Load this when writing or modifying code to avoid overengineering and unnecessary changes.
-user-invocable: false
+user-invocable: true
 ---
 
 # Coding Principles
@@ -70,6 +70,51 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Minimal Comments
+
+**Code should be self-documenting. Comments are a last resort.**
+
+- Remove comments that state the obvious (e.g., `# Save the file` before `file.save()`)
+- Remove section header comments (e.g., `# Configuration`, `# Helper functions`)
+- Keep docstrings for public APIs (functions, classes) with Args/Returns
+- Keep comments only when explaining non-obvious _why_, not _what_
+
+When a comment is necessary:
+
+- First word must be lowercase (e.g., `# handling edge case` not `# Handling edge case`)
+- Use -ing form (e.g., `# parsing response` not `# Parse response`)
+
+Examples:
+
+```python
+# bad - stating the obvious
+# Get the user
+user = get_user(id)
+
+# bad - capitalized, imperative
+# Parse the JSON response
+data = json.loads(response)
+
+# good - lowercase, -ing, explains why
+# handling malformed responses from legacy API
+if "data" not in response:
+    response = {"data": response}
+```
+
+## 6. Avoid AI Slop
+
+**Before committing, review your diff for LLM-specific anti-patterns.**
+
+Common AI code smells to remove:
+
+- Type casts to `any` (TS) or `# type: ignore` (Python) to silence errors instead of fixing them
+- Overly verbose variable names or redundant intermediate variables
+- "Just in case" fallbacks that can never trigger given the call site
+- Inconsistent style with surrounding code (see Section 3)
+- Redundant comments (see Section 5)
+
+Review workflow: Check your diff against main and ask "Would a human have written this?" If code looks defensive, verbose, or out of place—it's probably AI slop. Remove it.
 
 ---
 
