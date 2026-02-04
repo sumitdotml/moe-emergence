@@ -195,7 +195,7 @@ These items require verification before implementation. Must not assume they are
 | Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **DONE** — CodeParrot-clean          |
 | Prose dataset            | WikiText-103 vs OpenWebText vs C4 vs FineWeb — verify samples     | **DONE** — AllenAI C4 (en)           |
 | Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011          |
-| Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **TODO**                             |
+| Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **DONE** — not needed, see decision 006 |
 
 **Next Actions:**
 
@@ -205,7 +205,7 @@ These items require verification before implementation. Must not assume they are
 4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
 5. ~~Verify code/prose dataset samples~~ — **DONE** (decision 010)
 6. ~~Check datasets for formatting artifacts (whitespace, invisible chars)~~ — **DONE** (decision 011)
-7. Verify shuffle buffer rationale — is this heuristic justified?
+7. ~~Verify shuffle buffer rationale — is this heuristic justified?~~ — **DONE** (investigated, not needed)
 8. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
 
 **Reference: MMLU-Pro Whitespace Data Leak**

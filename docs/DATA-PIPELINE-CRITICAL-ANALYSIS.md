@@ -485,10 +485,10 @@ These proposals came from the multi-model debate. They need independent verifica
 | Item | Proposed Approach | Status |
 |------|-------------------|--------|
 | MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | **RESOLVED** — see decision 007 |
-| Train/eval split formula | `max(20, int(n * 0.05))` | Pending verification |
-| Shuffle buffer | `max(1000, size_mb*200)` | Pending verification |
-| Code dataset | CodeParrot-clean | Pending sample review |
-| Prose dataset | WikiText-103 or OpenWebText | Pending sample review |
+| Train/eval split formula | `max(20, int(n * 0.05))` | **RESOLVED** — see decision 008 |
+| Shuffle buffer | `max(1000, size_mb*200)` | **RESOLVED** — not needed after investigation, see decision 006 |
+| Code dataset | CodeParrot-clean | **RESOLVED** — see decision 010 |
+| Prose dataset | WikiText-103 or OpenWebText | **RESOLVED** — C4 chosen, see decision 010 |
 
 ### Post-Training
 
@@ -504,7 +504,7 @@ These proposals came from the multi-model debate. They need independent verifica
 |------|-------|--------------|--------|
 | 140-205 | Uses GSM8K + `hendrycks/competition_math` | Replace with MathQA from ZIP | **RESOLVED** — MathQA loader implemented |
 | N/A | No train/eval split | Add text-level split before packing | **RESOLVED** — `split_texts_for_eval()` added |
-| 113 | No shuffle buffer for CodeParrot | TBD after investigation | Pending |
+| 113 | No shuffle buffer for CodeParrot | TBD after investigation | **RESOLVED** — not needed, see decision 006 |
 | — | Fixed prefixes | No prefixes for MathQA | **RESOLVED** — see decision 007 |
 
 ---
