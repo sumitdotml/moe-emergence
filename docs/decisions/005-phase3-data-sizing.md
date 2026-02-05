@@ -1,8 +1,18 @@
 # Decision: Phase 3 Dataset Sizing and Token-Based Balancing
 
 **Date:** 2025-12-26
-**Status:** Accepted
+**Status:** Partially Superseded
 **Context Commit:** `07c29ba`
+
+---
+
+## Superseded Sections
+
+**Dataset choices in this document are outdated.** See:
+- **Decision 007**: MathQA replaces GSM8K + MATH, format changed to `{Problem}\n\n{Rationale}`
+- **Decision 010**: AllenAI C4 replaces WikiText-103 for prose
+
+**Still valid:** Token-based sizing rationale, `--balance-tokens` mechanism, imbalance warnings.
 
 ---
 
@@ -78,6 +88,24 @@ Choose **Option B**: Token-based reporting with optional balancing.
 
 - **Risks:**
   - Streaming + filtering may yield non-deterministic samples if upstream data changes; logging dataset versions/configs helps track drift
+
+---
+
+## Empirical Validation (2026-02-05)
+
+Token imbalance was verified empirically with `uv run python moe_emergence/data.py --size-mb 1`:
+
+| Domain | Target | Examples | Tokens | Blocks |
+|--------|--------|----------|--------|--------|
+| Code | 1MB | 274 | 415,076 | 810 |
+| Math | 1MB | 2,716 | 287,617 | 561 |
+| Prose | 1MB | 545 | 219,097 | 427 |
+
+**Key finding:** Code yields **1.9x more tokens** than prose for the same character count. This confirms the concern that equal MB ≠ equal tokens.
+
+**Implication:** Without `--balance-tokens`, the model sees ~2x more code tokens than prose tokens per epoch. This could confound "expert specialization" with exposure bias—code experts might appear more specialized simply due to more training signal.
+
+**Must do:** Use `--balance-tokens` for training runs to ensure fair domain comparison.
 
 ---
 
@@ -159,3 +187,6 @@ moe_emergence/data.py
 - **Data pipeline spec**: `docs/DATA-PIPELINE.md`
 - Design spec: `docs/project-design/MOE-PROJECT-DESIGN-V3.md` (lines 922-1109)
 - Code review: `docs/code-reviews/005-2025-12-26-data-py-fix.md`
+- **Superseding decisions:**
+  - `docs/decisions/007-math-prefix-randomization.md` (MathQA dataset, format)
+  - `docs/decisions/010-dataset-choices.md` (final dataset selections)
