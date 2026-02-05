@@ -418,12 +418,15 @@ class PackedMixedDomainDataset(Dataset):
             if not balance_tokens:
                 print("  Use --balance-tokens to truncate to smallest domain.\n")
 
-        # optional: balance by truncating to smallest domain
-        # TODO: shuffle blocks before truncating to avoid bias from naive [:N] slicing
-        # IMPORTANT: must use seeded RNG (random.Random(seed)) for reproducibility
-        # see docs/decisions/012-shuffle-before-truncate.md
         if balance_tokens:
             min_blocks = min(len(code_blocks), len(math_blocks), len(prose_blocks))
+
+            # shuffling before truncation to avoid tail-discard bias
+            rng = random.Random(seed)
+            rng.shuffle(code_blocks)
+            rng.shuffle(math_blocks)
+            rng.shuffle(prose_blocks)
+
             code_blocks = code_blocks[:min_blocks]
             math_blocks = math_blocks[:min_blocks]
             prose_blocks = prose_blocks[:min_blocks]
