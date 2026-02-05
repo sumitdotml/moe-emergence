@@ -36,7 +36,9 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
   - **Code**: CodeParrot-clean (diverse Python, multiple licenses)
   - **Math**: MathQA from allenai (29K word problems with rationales)
   - **Prose**: AllenAI C4 English (natural web text, well-filtered)
-- [ ] Verify shuffle buffer rationale
+- [x] Shuffle buffer rationale verified — not needed, see decision 006
+- [x] Token balancing required — 1.9x imbalance without `--balance-tokens`, see decision 005
+- [ ] Shuffle-before-truncate improvement — see decision 012 (proposed)
 
 ### Phase 4: Training Infrastructure
 

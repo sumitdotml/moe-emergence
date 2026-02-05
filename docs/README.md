@@ -135,6 +135,7 @@ When writing the final report, pull from:
 
 **Next Steps:**
 
-1. Run `uv run python moe_emergence/data.py --size-mb 10 --block-size 512`
-2. Record token counts/blocks in `docs/DATA-PIPELINE.md`
-3. Phase 4: Training infrastructure
+1. Run `uv run python moe_emergence/data.py --size-mb 10 --block-size 512 --balance-tokens`
+2. Implement shuffle-before-truncate (decision 012) — seeded RNG required
+3. Set up W&B experiment tracking (decision 009)
+4. Phase 4: Training infrastructure

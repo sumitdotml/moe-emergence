@@ -151,7 +151,7 @@ All issues from code reviews have been fixed:
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2025-01-25)
+## Current Status (2026-02-05)
 
 **Completed:**
 
@@ -184,6 +184,7 @@ All issues from code reviews have been fixed:
 | MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | See decision 007 (revised)                                |
 | Code dataset      | CodeParrot-clean                         | Diverse Python, multiple licenses, see decision 010       |
 | Prose dataset     | AllenAI C4 (en)                          | Natural web text, well-filtered, see decision 010         |
+| Token balancing   | `--balance-tokens` required for training | 1.9x imbalance without it, see decision 005 empirical     |
 
 **Pending Investigation:**
 
@@ -207,6 +208,7 @@ These items require verification before implementation. Must not assume they are
 6. ~~Check datasets for formatting artifacts (whitespace, invisible chars)~~ — **DONE** (decision 011)
 7. ~~Verify shuffle buffer rationale — is this heuristic justified?~~ — **DONE** (investigated, not needed)
 8. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
+9. Implement shuffle-before-truncate for token balancing — see `docs/decisions/012-shuffle-before-truncate.md` (proposed)
 
 **Reference: MMLU-Pro Whitespace Data Leak**
 
