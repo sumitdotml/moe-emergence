@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=2.3.5",
     "torch>=2.9.1",
     "transformers>=4.57.3",
+    "wandb>=0.24.0",
 ]
 
 [dependency-groups]
@@ -35,6 +36,7 @@ known-third-party = [
     "numpy",
     "torch",
     "transformers",
+    "wandb",
 ]
 known-first-party = [
     "data",

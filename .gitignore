@@ -13,6 +13,9 @@ wheels/
 # Data cache
 .cache/
 
+# W&B local runs
+wandb/
+
 .DS_Store
 
 !.claude/
