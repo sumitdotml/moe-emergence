@@ -38,7 +38,8 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
   - **Prose**: AllenAI C4 English (natural web text, well-filtered)
 - [x] Shuffle buffer rationale verified — not needed, see decision 006
 - [x] Token balancing required — 1.9x imbalance without `--balance-tokens`, see decision 005
-- [ ] Shuffle-before-truncate improvement — see decision 012 (proposed)
+- [x] Shuffle-before-truncate — see decision 012
+- [x] W&B experiment tracking — see decision 009, `moe_emergence/tracking.py`
 
 ### Phase 4: Training Infrastructure
 

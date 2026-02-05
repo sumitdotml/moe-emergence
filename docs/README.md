@@ -129,13 +129,19 @@ When writing the final report, pull from:
 
 ## Project Status
 
-**Current Phase:** Phase 3 IN PROGRESS (Dataset preparation)
+**Current Phase:** Phase 4 (Training Infrastructure)
 
 **Last Verification:** run-001 (2025-12-25) - All 10 tests passed
 
+**Phase 3 Completed:**
+- Data pipeline with token balancing
+- Shuffle-before-truncate (decision 012)
+- W&B tracking utilities (decision 009)
+- Multi-model code review (006-tracking-py-review.md)
+
 **Next Steps:**
 
-1. Run `uv run python moe_emergence/data.py --size-mb 10 --block-size 512 --balance-tokens`
-2. Implement shuffle-before-truncate (decision 012) — seeded RNG required
-3. Set up W&B experiment tracking (decision 009)
-4. Phase 4: Training infrastructure
+1. Implement training loop with LM + LB + Z losses
+2. Add checkpointing
+3. Run dense baseline
+4. Run MoE main experiment

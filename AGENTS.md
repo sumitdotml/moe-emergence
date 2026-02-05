@@ -160,59 +160,44 @@ All issues from code reviews have been fixed:
   - Full integration verification: 10/10 tests passed
   - See: `docs/experiments/run-001-gpt2-integration-verification.md`
   - Commit: `a15683e`
-- Phase 3 (Dataset preparation) [IN PROGRESS]
+- Phase 3 (Dataset preparation) [DONE]
   - Sequence packing implemented
-  - `PackedMixedDomainDataset` implemented
-  - Multi-model debate completed (11 passes, see `docs/models-debate/005*.md`)
-  - **Critical analysis completed** — see `docs/DATA-PIPELINE-CRITICAL-ANALYSIS.md`
+  - `PackedMixedDomainDataset` with token balancing
+  - W&B tracking utilities (`moe_emergence/tracking.py`)
+  - Multi-model debates: data pipeline (005\*.md), tracking review (006)
 
-**Current Phase:** Phase 3 (Dataset Preparation) — Data Pipeline Fixes
-
-**Blockers (No Training Until Resolved):**
-
-| Issue                     | Severity   | Status                                            |
-| ------------------------- | ---------- | ------------------------------------------------- |
-| Train/eval leakage        | ~~HIGH~~   | **DONE** — text-level split in `data.py`          |
-| Math dataset              | ~~HIGH~~   | **DONE** — MathQA loader implemented in `data.py` |
-| Code/Prose dataset choice | ~~MEDIUM~~ | **DONE** — see decision 010                       |
+**Current Phase:** Phase 4 (Training Infrastructure)
 
 **Verified Decisions:**
 
-| Decision          | Choice                                   | Notes                                                     |
-| ----------------- | ---------------------------------------- | --------------------------------------------------------- |
-| Math dataset      | MathQA (allenai)                         | 29K examples, ~11.3MB, Apache 2.0, loaded from source ZIP |
-| MathQA formatting | `{Problem}\n\n{Rationale}` (no prefixes) | See decision 007 (revised)                                |
-| Code dataset      | CodeParrot-clean                         | Diverse Python, multiple licenses, see decision 010       |
-| Prose dataset     | AllenAI C4 (en)                          | Natural web text, well-filtered, see decision 010         |
-| Token balancing   | `--balance-tokens` required for training | 1.9x imbalance without it, see decision 005 empirical     |
+| Decision            | Choice                                   | Notes                                                     |
+| ------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| Math dataset        | MathQA (allenai)                         | 29K examples, ~11.3MB, Apache 2.0, loaded from source ZIP |
+| MathQA formatting   | `{Problem}\n\n{Rationale}` (no prefixes) | See decision 007 (revised)                                |
+| Code dataset        | CodeParrot-clean                         | Diverse Python, multiple licenses, see decision 010       |
+| Prose dataset       | AllenAI C4 (en)                          | Natural web text, well-filtered, see decision 010         |
+| Token balancing     | `--balance-tokens` required for training | 1.9x imbalance without it, see decision 005 empirical     |
+| Shuffle truncation  | Shuffle blocks before truncating         | Defensive measure, see decision 012                       |
+| Experiment tracking | W&B                                      | See decision 009, `moe_emergence/tracking.py`             |
 
 **Pending Investigation:**
 
 These items require verification before implementation. Must not assume they are correct.
 
-| Item                     | What Needs Investigation                                          | Status                               |
-| ------------------------ | ----------------------------------------------------------------- | ------------------------------------ |
-| Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **DONE** — uses Decision 008 formula |
-| Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **DONE** — CodeParrot-clean          |
-| Prose dataset            | WikiText-103 vs OpenWebText vs C4 vs FineWeb — verify samples     | **DONE** — AllenAI C4 (en)           |
-| Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011          |
+| Item                     | What Needs Investigation                                          | Status                                  |
+| ------------------------ | ----------------------------------------------------------------- | --------------------------------------- |
+| Train/eval split formula | Is `max(20, int(n * 0.05))` the right approach? Verify rationale. | **DONE** — uses Decision 008 formula    |
+| Code dataset             | CodeParrot-clean vs StarCoderData — verify samples                | **DONE** — CodeParrot-clean             |
+| Prose dataset            | WikiText-103 vs OpenWebText vs C4 vs FineWeb — verify samples     | **DONE** — AllenAI C4 (en)              |
+| Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011             |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **DONE** — not needed, see decision 006 |
 
-**Next Actions:**
+**Next Actions (Phase 4):**
 
-1. ~~Update `moe_emergence/data.py` with MathQA loader (from ZIP)~~ — **DONE**
-2. ~~Verify train/eval split rationale~~ — **DONE** (uses `min(max(10, n*0.05), n*0.10)`)
-3. ~~Implement train/eval split in `data.py`~~ — **DONE**
-4. ~~Run verification and confirm no train/eval leakage~~ — **DONE**
-5. ~~Verify code/prose dataset samples~~ — **DONE** (decision 010)
-6. ~~Check datasets for formatting artifacts (whitespace, invisible chars)~~ — **DONE** (decision 011)
-7. ~~Verify shuffle buffer rationale — is this heuristic justified?~~ — **DONE** (investigated, not needed)
-8. Set up W&B experiment tracking — see `docs/decisions/009-experiment-tracking.md`
-9. Implement shuffle-before-truncate for token balancing — see `docs/decisions/012-shuffle-before-truncate.md` (proposed)
-
-**Reference: MMLU-Pro Whitespace Data Leak**
-
-MMLU-Pro had a bug where correct answers disproportionately started with leading whitespace (invisible in HF viewer, only detectable via `load_dataset()`). This affected Physics, Math, Chemistry — models could exploit formatting artifacts instead of learning content. Fixed Jan 2025. We must verify our datasets (especially MathQA) don't have similar issues. See: https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro/discussions/41
+1. Implement training loop with LM + LB + Z losses
+2. Add checkpointing and model saving
+3. Run dense baseline experiment
+4. Run MoE main experiment
 
 ## Budget Constraint
 
