@@ -78,19 +78,19 @@ Report at the end with only a 1-3 sentence summary of what you changed
 
 ## Project Structure & Module Organization
 
-- `moe_emergence/`: Core Python modules for MoE routing and GPT-2 integration (`moe.py`, `ffn.py`, `gpt2_moe.py`, `training_demo.py`).
+- `moe_emergence/`: Core Python modules — `moe.py`, `ffn.py`, `gpt2_moe.py`, `data.py`, `tracking.py`, `train.py`, `gpt2_inference.py`.
 - `notebooks/`: Exploratory experiments and visualizations.
-- `project-design/`: Design notes and project plans.
+- `docs/project-design/`: Design notes and project plans.
 - `README.md`: Goals, current status, and references.
 
 ## Build, Test, and Development Commands
 
 - `uv sync`: Install dependencies from `uv.lock` (recommended local setup).
+- `uv run python -m moe_emergence.train --preset shakedown --run-name test`: Run a shakedown training test.
 - `uv run python moe_emergence/verify_gpt2_integration.py`: Run Phase 2 verification (10 comprehensive tests).
 - `uv run python moe_emergence/gpt2_inference.py --moe`: Interactive inference playground with routing stats.
-- `python moe_emergence/training_demo.py`: Run a small MoE training demo as a smoke test.
-- `ruff format moe_emergence/`: Auto-format code with Ruff.
-- `ruff check moe_emergence/`: Lint for style and correctness issues.
+- `uv run ruff format moe_emergence/`: Auto-format code with Ruff.
+- `uv run ruff check moe_emergence/`: Lint for style and correctness issues.
 
 ## Coding Style & Naming Conventions
 
@@ -153,9 +153,9 @@ Code review issues (all fixed):
 
 Open items from cross-model audit (debate 008):
 
-- **P1: Import architecture** — All internal imports use bare module names (`from moe import ...`). Works for script invocation but fails in package/module mode. Fix before adding test harnesses.
+- ~~**P1: Import architecture** — Fixed in `3541faa`. All imports now use `moe_emergence.*` package form.~~
 - **P1: Stale docs** — `docs/DATA-PIPELINE.md` and V3 spec contain outdated dataset refs. DATA-PIPELINE.md marked superseded; V3 snippets are historical.
-- **High P2: Eval split formula** — `compute_eval_count()` docstring claims "at least 10 texts" but formula doesn't guarantee this for n<100. Not triggered at production scale.
+- ~~**High P2: Eval split formula** — Fixed in `39b069e`. Docstring now accurately describes small-n behavior.~~
 
 ## Current Status (2026-02-08)
 
@@ -174,9 +174,15 @@ Open items from cross-model audit (debate 008):
   - Full project audit (007) + cross-model convergence review (008)
   - Phase 4 training plan reviewed and amended (debate 009)
 
-**Current Phase:** Phase 4 (Training Infrastructure)
+**Current Phase:** Phase 4 (Training Infrastructure) — implementation complete, awaiting shakedown runs
 
 **Training Plan:** `docs/project-design/PHASE-4-TRAINING-PLAN.md` (reviewed, amended with debate 009 resolutions)
+
+**Phase 4 Implementation (commit `5efdfae`):**
+- `train.py`: presets, gradient accumulation, eval loop, checkpointing/resume, collapse detection
+- Model-only snapshots: `.safetensors` + `.json` sidecar (clone for GPT-2 tied weights)
+- Full resume: `.pt` with mode + architecture validation
+- `gpt2_inference.py`: updated to load safetensors, mode-aware (dense vs MoE)
 
 **Verified Decisions:**
 
@@ -191,6 +197,7 @@ Open items from cross-model audit (debate 008):
 | Experiment tracking | W&B                                      | See decision 009, `moe_emergence/tracking.py`             |
 | No-lb noise         | `noise_std=0.0`, no annealing            | Avoids confounding collapse measurement, see debate 009   |
 | Best model metric   | Lowest aggregate eval loss               | Model-only snapshot, updated at eval checkpoints          |
+| Checkpoint format   | `.pt` resume + `.safetensors` snapshots  | Avoids pickle for model-only artifacts, see training plan |
 
 **Pending Investigation:**
 
@@ -204,13 +211,11 @@ These items require verification before implementation. Must not assume they are
 | Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011             |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **DONE** — not needed, see decision 006 |
 
-**Next Actions (Phase 4):**
+**Next Actions:**
 
-1. Implement `train.py` (LM + LB + Z losses, periodic eval, checkpointing/resume, tracking hooks, collapse detection)
-2. Lock training hyperparameters (LR schedule, batch size, gradient accumulation, checkpoint format)
-3. Normalize imports to package-safe form (`moe_emergence.*`)
-4. Fix `compute_eval_count()` docstring/behavior mismatch
-5. Run dense baseline → MoE main → no-LB ablation
+1. Run dense + MoE shakedown tests (mandatory gate before budgeted runs)
+2. Run budgeted experiments: dense → moe-main → no-lb → top2
+3. Phase 5+ post-training analysis and visualization
 
 ## Budget Constraint
 

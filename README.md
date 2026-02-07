@@ -43,9 +43,12 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 
 ### Phase 4: Training Infrastructure
 
-- [ ] Training loop with LM + LB + Z losses
-- [ ] Logging & checkpointing
-- [ ] Dense baseline run
+- [x] `train.py` with presets (shakedown, dense, moe-main, no-lb, top2)
+- [x] Safetensors model snapshots + JSON sidecar, full resume `.pt` checkpoints
+- [x] Collapse detection, W&B tracking, local JSONL fallback
+- [x] Package-safe imports (`moe_emergence.*`)
+- [ ] Shakedown runs (dense + MoE)
+- [ ] Budgeted runs (dense → moe-main → no-lb → top2)
 
 ### Phase 5: Experiments
 
@@ -90,8 +93,8 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 | Verification         | ✅     | `verify_gpt2_integration.py` | 10 comprehensive tests                       |
 | Inference Playground | ✅     | `gpt2_inference.py`          | Supports vanilla/MoE/checkpoints             |
 | Sequence Packing     | ✅     | `data.py`                    | Efficient dataset without padding            |
-| Training Loop        | ⬜     | `train.py`                   | With aux loss collection                     |
-| Collapse Detection   | ⬜     | —                            | Early stopping for ablation                  |
+| Training Loop        | ✅     | `train.py`                   | LM + LB + Z losses, grad accum, eval loop    |
+| Collapse Detection   | ✅     | `train.py`                   | Early stopping for no-lb ablation            |
 | Visualization        | ⬜     | —                            | Heatmaps, entropy plots                      |
 
 ## Known Bottlenecks
@@ -138,9 +141,9 @@ uv run python moe_emergence/gpt2_inference.py --prompt "Once upon a time"
 # untrained MoE (Phase 2)
 uv run python moe_emergence/gpt2_inference.py --moe --prompt "def fibonacci(n):"
 
-# trained MoE from checkpoint (Phase 5+) (btw this isn't ready yet since I haven't done MoE training yet, coming soon)
+# trained checkpoint (reads mode/architecture from .json sidecar)
 uv run python moe_emergence/gpt2_inference.py \
-  --checkpoint checkpoints/run-002-step-10000.pt \
+  --checkpoint checkpoints/my-run/best-model \
   --prompt "Solve the equation x^2 + 5x + 6 = 0"
 
 # creative sampling
@@ -150,6 +153,26 @@ uv run python moe_emergence/gpt2_inference.py \
 ```
 
 See `python moe_emergence/gpt2_inference.py --help` for all options.
+
+### Training
+
+```bash
+# shakedown (quick sanity check, ~2 min)
+uv run python -m moe_emergence.train --preset shakedown --run-name shake-dense
+uv run python -m moe_emergence.train --preset shakedown --run-name shake-moe --moe-layers 8 9 10 11
+
+# dense baseline
+uv run python -m moe_emergence.train --preset dense --run-name dense-baseline
+
+# MoE main run
+uv run python -m moe_emergence.train --preset moe-main --run-name moe-main
+
+# resume from checkpoint
+uv run python -m moe_emergence.train --preset moe-main --run-name moe-main \
+  --resume checkpoints/moe-main/ckpt-step-500.pt
+```
+
+See `uv run python -m moe_emergence.train --help` for all options.
 
 ### Verification
 
