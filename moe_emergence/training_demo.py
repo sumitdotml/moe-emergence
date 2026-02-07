@@ -13,7 +13,7 @@ This file demonstrates how to train an MoE layer with all components:
 import torch
 import torch.nn as nn
 
-from moe import MoE
+from moe_emergence.moe import MoE
 
 
 def create_fake_data(batch_size: int, seq_len: int, hidden_dim: int, vocab_size: int):

@@ -25,7 +25,7 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
-from ffn import SwiGLU as Expert
+from moe_emergence.ffn import SwiGLU as Expert
 
 
 class RouterOutput(NamedTuple):

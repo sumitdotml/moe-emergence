@@ -26,7 +26,7 @@ from __future__ import annotations
 import torch
 from transformers import AutoTokenizer, GPT2LMHeadModel
 
-from gpt2_moe import (
+from moe_emergence.gpt2_moe import (
     MoEWrapper,
     collect_aux_outputs,
     compute_load_balance_loss,

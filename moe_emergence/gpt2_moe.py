@@ -19,7 +19,7 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
-from moe import Router, compute_load_balance_loss, compute_z_loss
+from moe_emergence.moe import Router, compute_load_balance_loss, compute_z_loss
 
 
 class MoEWrapperOutput(NamedTuple):
