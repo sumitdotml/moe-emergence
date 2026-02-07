@@ -13,6 +13,7 @@
       "Bash(curl:*)",
       "Bash(GIT_EDITOR=true git diff:*)",
       "Bash(GIT_EDITOR=true git status:*)",
+      "Bash(GIT_EDITOR=true git log:*)",
       "Bash(ls:*)"
     ]
   }
