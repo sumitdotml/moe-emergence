@@ -313,11 +313,13 @@ def load_prose_data(
     """
     from datasets import load_dataset
 
+    hf_cache = CACHE_DIR / "huggingface"
     ds = load_dataset(
         "allenai/c4",
         "en",
         split="train",
         streaming=True,
+        cache_dir=str(hf_cache),
     )
 
     texts = []
