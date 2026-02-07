@@ -121,3 +121,16 @@ Data Pipeline Critical Reviews (Phase 3)
 - Opus-4-5: `docs/models-debate/005a-DATA-PIPELINE-CRITICAL-REVIEW-OPUS-4-5.md`
 - GPT-5-2: `docs/models-debate/005b-DATA-PIPELINE-CRITICAL-REVIEW-GPT-5-2.md`
 - Gemini-3: `docs/models-debate/005c-DATA-PIPELINE-CRITICAL-REVIEW-GEMINI-3.md`
+
+---
+
+Experiment Tracking Review (Phase 3)
+
+- GPT-5-2: `docs/models-debate/006-tracking-py-review.md`
+
+---
+
+Full Project Audit + Cross-Model Convergence (Phase 4 Prep)
+
+- GPT-5-3-Codex: `docs/models-debate/007-PROJECT-CRITICAL-ANALYSIS-BOOK-2026-02-07.md` — end-to-end technical audit at commit `8d49faa`
+- Opus-4-6 + GPT-5-3-Codex: `docs/models-debate/008-CRITICAL-ANALYSIS-CONVERGENCE-2026-02-07.md` — cross-model severity review, 3 rounds to convergence, final agreed priority table

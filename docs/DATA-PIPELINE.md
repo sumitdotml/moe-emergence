@@ -1,3 +1,5 @@
+> **SUPERSEDED** — Dataset choices, splits, and formatting are now governed by decisions 007-012 and CLAUDE.md. This document is retained for historical context only.
+
 # Data Pipeline
 
 This document describes the data pipeline for training the MoE model on three distinct domains: code, math, and prose.
