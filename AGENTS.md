@@ -157,7 +157,7 @@ Open items from cross-model audit (debate 008):
 - **P1: Stale docs** — `docs/DATA-PIPELINE.md` and V3 spec contain outdated dataset refs. DATA-PIPELINE.md marked superseded; V3 snippets are historical.
 - **High P2: Eval split formula** — `compute_eval_count()` docstring claims "at least 10 texts" but formula doesn't guarantee this for n<100. Not triggered at production scale.
 
-## Current Status (2026-02-07)
+## Current Status (2026-02-08)
 
 **Completed:**
 
@@ -172,8 +172,11 @@ Open items from cross-model audit (debate 008):
   - W&B tracking utilities (`moe_emergence/tracking.py`)
   - Multi-model debates: data pipeline (005\*.md), tracking review (006)
   - Full project audit (007) + cross-model convergence review (008)
+  - Phase 4 training plan reviewed and amended (debate 009)
 
 **Current Phase:** Phase 4 (Training Infrastructure)
+
+**Training Plan:** `docs/project-design/PHASE-4-TRAINING-PLAN.md` (reviewed, amended with debate 009 resolutions)
 
 **Verified Decisions:**
 
@@ -186,6 +189,8 @@ Open items from cross-model audit (debate 008):
 | Token balancing     | `--balance-tokens` required for training | 1.9x imbalance without it, see decision 005 empirical     |
 | Shuffle truncation  | Shuffle blocks before truncating         | Defensive measure, see decision 012                       |
 | Experiment tracking | W&B                                      | See decision 009, `moe_emergence/tracking.py`             |
+| No-lb noise         | `noise_std=0.0`, no annealing            | Avoids confounding collapse measurement, see debate 009   |
+| Best model metric   | Lowest aggregate eval loss               | Model-only snapshot, updated at eval checkpoints          |
 
 **Pending Investigation:**
 

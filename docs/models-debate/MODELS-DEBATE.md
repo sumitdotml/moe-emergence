@@ -134,3 +134,9 @@ Full Project Audit + Cross-Model Convergence (Phase 4 Prep)
 
 - GPT-5-3-Codex: `docs/models-debate/007-PROJECT-CRITICAL-ANALYSIS-BOOK-2026-02-07.md` — end-to-end technical audit at commit `8d49faa`
 - Opus-4-6 + GPT-5-3-Codex: `docs/models-debate/008-CRITICAL-ANALYSIS-CONVERGENCE-2026-02-07.md` — cross-model severity review, 3 rounds to convergence, final agreed priority table
+
+---
+
+Phase 4 Training Plan Review (Phase 4)
+
+- Opus-4-6 + GPT-5-3-Codex: `docs/models-debate/009-PHASE4-PLAN-CONVERGENCE-2026-02-08.md` — critical review of GPT 5.3 Codex's training plan, converged in 1 round, 4 MEDIUM amendments (noise confound in no-lb, best-model criteria, OOM fallback, reproducibility contract)
