@@ -39,9 +39,12 @@ def compute_eval_count(n_texts: int) -> int:
     Computes number of texts to hold out for evaluation.
 
     Formula: min(max(10, int(n * 0.05)), int(n * 0.10))
-    - At least 10 texts (for statistical reliability)
-    - Target 5% of texts
-    - Capped at 10% (to protect small domains)
+    - Targets 5% of texts, with a floor of 10
+    - Hard cap at 10% (to protect small domains)
+
+    Note: the 10% cap means fewer than 10 eval texts when n < 100.
+    This is acceptable — at production scale (n > 1000) the floor
+    of 10 and the 5% target are the active constraints.
 
     See docs/decisions/008-text-level-validation-split.md for rationale.
     """
