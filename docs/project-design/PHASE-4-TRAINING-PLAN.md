@@ -11,7 +11,7 @@ It is optimized for dual-device parity (MPS + CUDA) and budget-constrained execu
 1. Implement `moe_emergence/train.py`.
 2. Support dense and MoE training paths in one script.
 3. Integrate `moe_emergence/tracking.py`.
-4. Add dual checkpoint outputs (full-resume + model-only).
+4. Add dual checkpoint outputs (full-resume `.pt` + model-only `.safetensors`).
 5. Add mandatory pre-run shakedown gate.
 6. Add run presets for dense, moe-main, no-lb, and top2.
 7. Document run commands and acceptance criteria.
@@ -97,6 +97,11 @@ It is optimized for dual-device parity (MPS + CUDA) and budget-constrained execu
 ## Checkpoint Contract
 Checkpoint directory: `checkpoints/<run-name>/`
 
+### Format Policy
+1. Full resume checkpoints use `.pt` because optimizer/scheduler/RNG states are Python objects.
+2. Model-only artifacts use `.safetensors` to avoid pickle-based loading risks.
+3. `.pt` loading is allowed only for trusted local training artifacts created by this project.
+
 ### Full Resume Checkpoint
 Filename: `ckpt-step-<n>.pt`
 Required keys:
@@ -104,16 +109,19 @@ Required keys:
 Resume must validate `format_version == 1` before loading.
 
 ### Model-Only Snapshot
-Filename: `model-step-<n>.pt`
-Required keys:
-`format_version`, `step`, `preset`, `mode`, `model_state_dict`, `config`, `metrics_summary`.
+Filenames:
+1. `model-step-<n>.safetensors` (weights only)
+2. `model-step-<n>.json` (metadata sidecar)
+
+Model metadata JSON required keys:
+`format_version`, `step`, `preset`, `mode`, `config`, `metrics_summary`.
 
 ### Best Model Selection
-`best-model.pt` is the model-only snapshot with the lowest aggregate eval loss (`eval/loss`). Updated at each eval checkpoint if current eval loss < best seen so far.
+`best-model.safetensors` (+ `best-model.json`) is the model-only snapshot with the lowest aggregate eval loss (`eval/loss`). Updated at each eval checkpoint if current eval loss < best seen so far.
 
 ### Retention
 1. Keep last `K` full checkpoints (`--keep-last-k`).
-2. Always retain `best-model.pt` and `final-model.pt`.
+2. Always retain `best-model.safetensors`/`best-model.json` and `final-model.safetensors`/`final-model.json`.
 3. Resume is permitted only from full checkpoints.
 4. Resume must validate architecture/mode compatibility and `format_version` before loading.
 
@@ -148,7 +156,7 @@ Pass criteria:
 4. Resume test from step N to N+M on full checkpoint.
 5. Device parity test on MPS and CUDA when both available.
 6. No-LB collapse early-stop test.
-7. Load model-only snapshot in `moe_emergence/gpt2_inference.py`.
+7. Load model-only `.safetensors` snapshot in `moe_emergence/gpt2_inference.py`.
 
 ## Documentation Deliverables
 1. Add Phase 4 decision log in `docs/decisions/`.
