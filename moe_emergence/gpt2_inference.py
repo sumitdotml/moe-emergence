@@ -11,8 +11,8 @@ Usage:
     # With untrained MoE layers (Phase 2)
     python moe_emergence/gpt2_inference.py --moe
 
-    # With trained MoE checkpoint (Phase 5+)
-    python moe_emergence/gpt2_inference.py --checkpoint checkpoints/run-002-step-10000.pt
+    # With trained checkpoint (stem path, expects .safetensors + .json; works for dense or MoE)
+    python moe_emergence/gpt2_inference.py --checkpoint checkpoints/my-run/best-model
 
     # Custom prompt
     python moe_emergence/gpt2_inference.py --prompt "Once upon a time"
@@ -25,7 +25,10 @@ Usage:
 """
 
 import argparse
+import json
+from pathlib import Path
 
+from safetensors.torch import load_file as load_safetensors
 import torch
 from transformers import AutoTokenizer, GPT2LMHeadModel
 
@@ -64,7 +67,7 @@ def main():
         "--checkpoint",
         type=str,
         default=None,
-        help="Path to trained MoE checkpoint (e.g., checkpoints/run-002-step-10000.pt)",
+        help="Path to model snapshot stem (e.g., checkpoints/my-run/best-model)",
     )
     parser.add_argument(
         "--moe-layers",
@@ -99,15 +102,6 @@ def main():
     print("=" * 60)
     print(f"Device: {device}")
 
-    # model type determination
-    if args.checkpoint:
-        model_type = "MoE (trained checkpoint)"
-    elif args.moe:
-        model_type = "MoE (untrained/warm-start)"
-    else:
-        model_type = "GPT-2 (vanilla)"
-    print(f"Model: {model_type}")
-
     print("\nLoading model...")
     model = GPT2LMHeadModel.from_pretrained("gpt2")
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -115,29 +109,47 @@ def main():
 
     # handling MoE: either load checkpoint or install fresh
     moe_modules = None
+    is_moe = False
     if args.checkpoint:
-        from gpt2_moe import install_moe_layers
+        # reading architecture config from json sidecar
+        stem = Path(args.checkpoint)
+        meta_path = stem.with_suffix(".json")
+        if not meta_path.exists():
+            raise FileNotFoundError(f"Missing metadata sidecar: {meta_path}")
+        with open(meta_path) as f:
+            meta = json.load(f)
+        ckpt_config = meta.get("config", {})
+        ckpt_mode = meta.get("mode", ckpt_config.get("mode", "dense"))
 
-        # first install MoE architecture (needed for state_dict loading)
-        print(f"Installing MoE architecture at {args.moe_layers}...")
-        model, moe_modules = install_moe_layers(
-            model,
-            moe_layers=args.moe_layers,
-            n_experts=args.n_experts,
-            topk=1,
-        )
+        if ckpt_mode == "moe":
+            from moe_emergence.gpt2_moe import install_moe_layers
 
-        # loading trained weights
-        print(f"Loading checkpoint: {args.checkpoint}")
-        checkpoint = torch.load(args.checkpoint, map_location="cpu")
-        model.load_state_dict(checkpoint["model_state_dict"])
-        print(f"  Loaded from step {checkpoint.get('step', 'unknown')}")
+            is_moe = True
+            moe_layers = ckpt_config.get("moe_layers", args.moe_layers)
+            n_experts = ckpt_config.get("n_experts", args.n_experts)
+            topk = ckpt_config.get("topk", 1)
+
+            print(f"Installing MoE architecture at {moe_layers} (topk={topk})...")
+            model, moe_modules = install_moe_layers(
+                model,
+                moe_layers=moe_layers,
+                n_experts=n_experts,
+                topk=topk,
+            )
+
+        # loading trained weights from .safetensors
+        st_path = stem.with_suffix(".safetensors")
+        print(f"Loading checkpoint: {st_path}")
+        state_dict = load_safetensors(str(st_path), device="cpu")
+        model.load_state_dict(state_dict)
+        print(f"  Loaded from step {meta.get('step', 'unknown')}")
 
         total_params = sum(p.numel() for p in model.parameters())
         print(f"Total parameters: {total_params:,} (~{total_params / 1e6:.1f}M)")
 
     elif args.moe:
-        from gpt2_moe import install_moe_layers
+        is_moe = True
+        from moe_emergence.gpt2_moe import install_moe_layers
 
         print(f"Installing MoE layers at {args.moe_layers}...")
         model, moe_modules = install_moe_layers(
@@ -151,6 +163,18 @@ def main():
 
     model = model.to(device)  # type: ignore[arg-type]
     model.eval()
+
+    if is_moe:
+        model_type = (
+            "MoE (trained checkpoint)"
+            if args.checkpoint
+            else "MoE (untrained/warm-start)"
+        )
+    elif args.checkpoint:
+        model_type = "Dense (trained checkpoint)"
+    else:
+        model_type = "GPT-2 (vanilla)"
+    print(f"Model: {model_type}")
 
     gen_config = {
         "max_new_tokens": args.max_tokens,
@@ -191,8 +215,8 @@ def main():
     print("=" * 60)
 
     # showing routing stats if MoE
-    if args.moe or args.checkpoint:
-        from gpt2_moe import collect_aux_outputs
+    if is_moe:
+        from moe_emergence.gpt2_moe import collect_aux_outputs
 
         print("\nMoE Routing Stats (last generation)")
         print("=" * 60)
