@@ -145,13 +145,19 @@ Training a small MoE model on 3 domains (code, math, prose) to demonstrate exper
 
 ## Known Issues
 
-All issues from code reviews have been fixed:
+Code review issues (all fixed):
 
 - `moe.py` fixes in commit `eea9294` - see `docs/code-reviews/001-2025-12-23-moe-py-review.md`
 - `gpt2_moe.py` fixes in commit `ffc77ab` - see `docs/code-reviews/003-2025-12-23-gpt2-moe-fix.md`
 - Loss dedup + test hardening in commit `c929d8c` - see `docs/code-reviews/004-2025-12-23-loss-dedup-and-tests.md`
 
-## Current Status (2026-02-05)
+Open items from cross-model audit (debate 008):
+
+- **P1: Import architecture** — All internal imports use bare module names (`from moe import ...`). Works for script invocation but fails in package/module mode. Fix before adding test harnesses.
+- **P1: Stale docs** — `docs/DATA-PIPELINE.md` and V3 spec contain outdated dataset refs. DATA-PIPELINE.md marked superseded; V3 snippets are historical.
+- **High P2: Eval split formula** — `compute_eval_count()` docstring claims "at least 10 texts" but formula doesn't guarantee this for n<100. Not triggered at production scale.
+
+## Current Status (2026-02-07)
 
 **Completed:**
 
@@ -165,6 +171,7 @@ All issues from code reviews have been fixed:
   - `PackedMixedDomainDataset` with token balancing
   - W&B tracking utilities (`moe_emergence/tracking.py`)
   - Multi-model debates: data pipeline (005\*.md), tracking review (006)
+  - Full project audit (007) + cross-model convergence review (008)
 
 **Current Phase:** Phase 4 (Training Infrastructure)
 
@@ -194,10 +201,11 @@ These items require verification before implementation. Must not assume they are
 
 **Next Actions (Phase 4):**
 
-1. Implement training loop with LM + LB + Z losses
-2. Add checkpointing and model saving
-3. Run dense baseline experiment
-4. Run MoE main experiment
+1. Implement `train.py` (LM + LB + Z losses, periodic eval, checkpointing/resume, tracking hooks, collapse detection)
+2. Lock training hyperparameters (LR schedule, batch size, gradient accumulation, checkpoint format)
+3. Normalize imports to package-safe form (`moe_emergence.*`)
+4. Fix `compute_eval_count()` docstring/behavior mismatch
+5. Run dense baseline → MoE main → no-LB ablation
 
 ## Budget Constraint
 
