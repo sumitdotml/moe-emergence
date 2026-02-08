@@ -140,3 +140,9 @@ Full Project Audit + Cross-Model Convergence (Phase 4 Prep)
 Phase 4 Training Plan Review (Phase 4)
 
 - Opus-4-6 + GPT-5-3-Codex: `docs/models-debate/009-PHASE4-PLAN-CONVERGENCE-2026-02-08.md` — critical review of GPT 5.3 Codex's training plan, converged in 1 round, 4 MEDIUM amendments (noise confound in no-lb, best-model criteria, OOM fallback, reproducibility contract)
+
+---
+
+GPU Setup Guide Review (Phase 4)
+
+- Opus-4-6 + GPT-5-2: `docs/models-debate/010-GPU-SETUP-GUIDE-CONVERGENCE-2026-02-08.md` — senior review of PrimeIntellect GPU setup guide, converged in 2 rounds, 5 fixes (import bug, storage sizing from ~35GB→~82GB, resume sort -V, pricing caveat, pod ID fallback)
