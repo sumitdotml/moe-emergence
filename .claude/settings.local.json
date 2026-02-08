@@ -14,7 +14,9 @@
       "Bash(GIT_EDITOR=true git diff:*)",
       "Bash(GIT_EDITOR=true git status:*)",
       "Bash(GIT_EDITOR=true git log:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:docs.primeintellect.ai)",
+      "WebFetch(domain:www.primeintellect.ai)"
     ]
   }
 }
