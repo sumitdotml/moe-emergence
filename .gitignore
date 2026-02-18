@@ -16,6 +16,9 @@ wheels/
 # W&B local runs
 wandb/
 
+# Training artifacts
+checkpoints/
+
 .DS_Store
 
 !.claude/
