@@ -112,6 +112,7 @@ When writing the final report, pull from:
 ## Experiment Logs
 
 - `docs/experiments/run-001-gpt2-integration-verification.md` (Phase 2 verification)
+- `docs/experiments/run-002-phase4-hardening-shakedown.md` (Phase 4 hardening verification)
 
 ---
 
@@ -124,14 +125,16 @@ When writing the final report, pull from:
 | 003 | 2025-12-23 | `gpt2_moe.py` gaps  | Fixed in `ffc77ab` |
 | 004 | 2025-12-23 | Loss dedup + tests  | Fixed in `c929d8c` |
 | 005 | 2025-12-26 | `data.py` fix       | —                  |
+| 006 | 2026-02-18 | Phase 4 review      | Findings documented |
+| 007 | 2026-02-18 | Phase 4 fixes       | Implemented         |
 
 ---
 
 ## Project Status
 
-**Current Phase:** Phase 4 (Training Infrastructure)
+**Current Phase:** Phase 4 (Training hardening complete; pre-training shakedown complete)
 
-**Last Verification:** run-001 (2025-12-25) - All 10 tests passed
+**Last Verification:** 2026-02-18 shakedown + resume checks (dense + MoE)
 
 **Phase 3 Completed:**
 - Data pipeline with token balancing
@@ -141,7 +144,7 @@ When writing the final report, pull from:
 
 **Next Steps:**
 
-1. Implement training loop with LM + LB + Z losses
-2. Add checkpointing
-3. Run dense baseline
-4. Run MoE main experiment
+1. Commit Phase 4 hardening patch (`train.py`, `tracking.py`, docs updates)
+2. Run budgeted training sequence (dense baseline then MoE main)
+3. Run no-LB ablation and monitor collapse behavior
+4. Generate Phase 5 analysis artifacts (domain specialization + routing stats)

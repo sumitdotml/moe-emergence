@@ -114,6 +114,7 @@ Report at the end with only a 1-3 sentence summary of what you changed
 - Keep large datasets, model checkpoints, and generated plots out of version control unless explicitly requested.
 - When adding notebooks, clear or minimize outputs to keep diffs small and focused.
 - **All cached data must live in `.cache/` at the repository root** — not in `~/.cache/` or other system locations. This includes HuggingFace datasets, model weights, and any downloaded files. The `.cache/` directory is gitignored.
+- `checkpoints/` and `wandb/` are local-run artifacts and should remain out of git; clean old runs after validation to avoid disk bloat.
 
 ---
 
@@ -157,7 +158,7 @@ Open items from cross-model audit (debate 008):
 - **P1: Stale docs** — `docs/DATA-PIPELINE.md` and V3 spec contain outdated dataset refs. DATA-PIPELINE.md marked superseded; V3 snippets are historical.
 - ~~**High P2: Eval split formula** — Fixed in `39b069e`. Docstring now accurately describes small-n behavior.~~
 
-## Current Status (2026-02-08)
+## Current Status (2026-02-18)
 
 **Completed:**
 
@@ -174,7 +175,7 @@ Open items from cross-model audit (debate 008):
   - Full project audit (007) + cross-model convergence review (008)
   - Phase 4 training plan reviewed and amended (debate 009)
 
-**Current Phase:** Phase 4 (Training Infrastructure) — implementation complete, awaiting shakedown runs
+**Current Phase:** Phase 4 (Training hardening complete) — shakedown gate passed, ready for budgeted runs
 
 **Training Plan:** `docs/project-design/PHASE-4-TRAINING-PLAN.md` (reviewed, amended with debate 009 resolutions)
 
@@ -183,6 +184,15 @@ Open items from cross-model audit (debate 008):
 - Model-only snapshots: `.safetensors` + `.json` sidecar (clone for GPT-2 tied weights)
 - Full resume: `.pt` with mode + architecture validation
 - `gpt2_inference.py`: updated to load safetensors, mode-aware (dense vs MoE)
+
+**Phase 4 Hardening (2026-02-18):**
+- Per-domain eval metrics fixed to sequence-level CE grouped by domain
+- W&B eval perplexity now uses LM-based eval perplexity from `run_eval()` (no recompute from aggregate loss)
+- Empty-dataset fail-fast guards added for train/eval block construction
+- CUDA-safe input pipeline defaults added (`num_workers=2`, `pin_memory=True`, `persistent_workers=True`, non-blocking transfer)
+- Per-domain training metrics added (`train/loss_code`, `train/loss_math`, `train/loss_prose`)
+- Resume RNG restoration hardened for MPS/CPU byte-state requirements
+- Documentation added: `docs/code-reviews/006-2026-02-18-phase4-training-review.md`, `docs/code-reviews/007-2026-02-18-phase4-training-fix.md`, `docs/experiments/run-002-phase4-hardening-shakedown.md`
 
 **Verified Decisions:**
 
@@ -213,9 +223,9 @@ These items require verification before implementation. Must not assume they are
 
 **Next Actions:**
 
-1. Run dense + MoE shakedown tests (mandatory gate before budgeted runs)
-2. Run budgeted experiments: dense → moe-main → no-lb → top2
-3. Phase 5+ post-training analysis and visualization
+1. Commit Phase 4 hardening patch (`train.py`, `tracking.py`, docs updates)
+2. Run budgeted experiments: dense → moe-main → no-lb (early-stop on collapse) → top2 (optional short run)
+3. Begin Phase 5 post-training analysis and visualization
 
 ## Budget Constraint
 
