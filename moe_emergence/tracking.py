@@ -122,6 +122,8 @@ def log_step(
 def log_eval(
     step: int,
     eval_loss: float,
+    eval_lm_loss: float,
+    eval_perplexity: float,
     domain_losses: Optional[dict[str, float]] = None,
     domain_perplexities: Optional[dict[str, float]] = None,
 ) -> None:
@@ -131,6 +133,8 @@ def log_eval(
     Args:
         step: Current training step
         eval_loss: Overall eval loss
+        eval_lm_loss: LM-only eval loss
+        eval_perplexity: LM-based eval perplexity
         domain_losses: Per-domain eval losses
         domain_perplexities: Per-domain perplexities
     """
@@ -139,7 +143,8 @@ def log_eval(
 
     metrics = {
         "eval/loss": eval_loss,
-        "eval/perplexity": math.exp(eval_loss),
+        "eval/lm_loss": eval_lm_loss,
+        "eval/perplexity": eval_perplexity,
         "step": step,
     }
 

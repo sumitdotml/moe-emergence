@@ -33,6 +33,7 @@ import time
 import numpy as np
 from safetensors.torch import save_file as save_safetensors
 import torch
+import torch.nn.functional as F
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, GPT2LMHeadModel, get_cosine_schedule_with_warmup
@@ -249,9 +250,19 @@ def load_checkpoint(
 
     random.setstate(ckpt["python_random_state"])
     np.random.set_state(ckpt["numpy_random_state"])
-    torch.random.set_rng_state(ckpt["torch_rng_state"])
+    torch_rng_state = ckpt["torch_rng_state"]
+    if not isinstance(torch_rng_state, torch.Tensor):
+        torch_rng_state = torch.tensor(torch_rng_state, dtype=torch.uint8)
+    torch.random.set_rng_state(
+        torch_rng_state.detach().to(device="cpu", dtype=torch.uint8)
+    )
     if torch.cuda.is_available() and ckpt["cuda_rng_state_if_available"] is not None:
-        torch.cuda.set_rng_state_all(ckpt["cuda_rng_state_if_available"])
+        cuda_states = []
+        for state in ckpt["cuda_rng_state_if_available"]:
+            if not isinstance(state, torch.Tensor):
+                state = torch.tensor(state, dtype=torch.uint8)
+            cuda_states.append(state.detach().to(device="cpu", dtype=torch.uint8))
+        torch.cuda.set_rng_state_all(cuda_states)
 
     return ckpt["step"] + 1, ckpt.get("config", {}), ckpt.get("preset", "unknown")
 
@@ -315,6 +326,21 @@ def infinite_loader(loader: DataLoader):
             yield batch
 
 
+def compute_sequence_lm_losses(
+    logits: torch.Tensor, input_ids: torch.Tensor
+) -> torch.Tensor:
+    """Returns per-sequence LM losses (shifted-token CE) with shape [batch]."""
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = input_ids[..., 1:].contiguous()
+    batch_size = shift_labels.shape[0]
+    token_losses = F.cross_entropy(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        shift_labels.view(-1),
+        reduction="none",
+    )
+    return token_losses.view(batch_size, -1).mean(dim=1)
+
+
 # ---------------------------------------------------------------------------
 # Eval
 # ---------------------------------------------------------------------------
@@ -329,6 +355,7 @@ def run_eval(
     lb_coef: float,
     z_coef: float,
     n_experts: int,
+    non_blocking_transfer: bool = False,
 ) -> dict:
     model.eval()
 
@@ -340,11 +367,12 @@ def run_eval(
     domain_losses: dict[str, list[float]] = {}
 
     for batch in eval_loader:
-        input_ids = batch["input_ids"].to(device)
+        input_ids = batch["input_ids"].to(device, non_blocking=non_blocking_transfer)
         domains = batch["domains"]
 
         outputs = model(input_ids=input_ids, labels=input_ids)
         lm_loss = outputs.loss.item()
+        seq_losses = compute_sequence_lm_losses(outputs.logits, input_ids)
 
         lb_loss_val = 0.0
         z_loss_val = 0.0
@@ -366,9 +394,8 @@ def run_eval(
         total_z_loss += z_loss_val
         n_batches += 1
 
-        # per-domain tracking (batch-level: each batch has mixed domains)
-        for d in domains:
-            domain_losses.setdefault(d, []).append(lm_loss)
+        for domain, seq_loss in zip(domains, seq_losses):
+            domain_losses.setdefault(domain, []).append(float(seq_loss.item()))
 
     model.train()
 
@@ -382,13 +409,11 @@ def run_eval(
         "eval/perplexity": math.exp(min(avg_lm, 20)),  # clamp for safety
     }
 
-    domain_ppl = {}
     for d, losses in domain_losses.items():
         avg = sum(losses) / len(losses)
         result[f"eval/loss_{d}"] = avg
         ppl = math.exp(min(avg, 20))
         result[f"eval/ppl_{d}"] = ppl
-        domain_ppl[d] = ppl
 
     return result
 
@@ -533,18 +558,46 @@ def train(args: argparse.Namespace) -> None:
         balance_tokens=False,
         seed=args.seed,
     )
+    if len(train_dataset) == 0:
+        raise ValueError(
+            "Train dataset has zero blocks. Increase --size-mb, reduce --block-size, "
+            "or verify dataset download/cache under .cache/."
+        )
+    if len(eval_dataset) == 0:
+        raise ValueError(
+            "Eval dataset has zero blocks. Increase --size-mb, reduce --block-size, "
+            "or verify dataset download/cache under .cache/."
+        )
+    use_cuda_loader_tuning = device.type == "cuda"
+    loader_num_workers = 2 if use_cuda_loader_tuning else 0
+    loader_pin_memory = use_cuda_loader_tuning
+    loader_persistent_workers = use_cuda_loader_tuning and loader_num_workers > 0
+    non_blocking_transfer = use_cuda_loader_tuning
+    print(
+        "DataLoader settings: "
+        f"num_workers={loader_num_workers}, "
+        f"pin_memory={loader_pin_memory}, "
+        f"persistent_workers={loader_persistent_workers}, "
+        f"non_blocking_transfer={non_blocking_transfer}"
+    )
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         collate_fn=collate_packed,
+        num_workers=loader_num_workers,
+        pin_memory=loader_pin_memory,
+        persistent_workers=loader_persistent_workers,
     )
     eval_loader = DataLoader(
         eval_dataset,
         batch_size=args.batch_size,
         shuffle=False,
         collate_fn=collate_packed,
+        num_workers=loader_num_workers,
+        pin_memory=loader_pin_memory,
+        persistent_workers=loader_persistent_workers,
     )
 
     print(f"Train: {len(train_dataset)} blocks | Eval: {len(eval_dataset)} blocks")
@@ -634,14 +687,25 @@ def train(args: argparse.Namespace) -> None:
         accum_lm = 0.0
         accum_lb = 0.0
         accum_z = 0.0
+        train_domain_sums: dict[str, float] = {}
+        train_domain_counts: dict[str, int] = {}
         last_aux = None
 
         for _micro in range(args.grad_accum_steps):
             batch = next(data_iter)
-            input_ids = batch["input_ids"].to(device)
+            input_ids = batch["input_ids"].to(
+                device, non_blocking=non_blocking_transfer
+            )
+            domains = batch["domains"]
 
             outputs = model(input_ids=input_ids, labels=input_ids)
             lm_loss = outputs.loss / args.grad_accum_steps
+            seq_losses = compute_sequence_lm_losses(outputs.logits.detach(), input_ids)
+            for domain, seq_loss in zip(domains, seq_losses):
+                train_domain_sums[domain] = train_domain_sums.get(domain, 0.0) + float(
+                    seq_loss.item()
+                )
+                train_domain_counts[domain] = train_domain_counts.get(domain, 0) + 1
 
             lb_loss_scaled = torch.tensor(0.0, device=device)
             z_loss_scaled = torch.tensor(0.0, device=device)
@@ -691,6 +755,11 @@ def train(args: argparse.Namespace) -> None:
         avg_lb = accum_lb / args.grad_accum_steps
         avg_z = accum_z / args.grad_accum_steps
         total_loss = avg_lm + lb_coef * avg_lb + z_coef * avg_z
+        train_domain_losses = {
+            domain: train_domain_sums[domain] / count
+            for domain, count in train_domain_counts.items()
+            if count > 0
+        }
 
         # ::: logging :::::
         elapsed = time.time() - step_start_time
@@ -706,23 +775,25 @@ def train(args: argparse.Namespace) -> None:
             lb_loss=avg_lb,
             z_loss=avg_z,
             aux_outputs=last_aux if is_moe else None,
+            domain_losses=train_domain_losses or None,
             learning_rate=current_lr,
             tokens_per_sec=tps,
             log_router_every=args.log_router_every,
         )
 
         # local JSONL
-        local_logger.log(
-            {
-                "step": step,
-                "train/loss": total_loss,
-                "train/lm_loss": avg_lm,
-                "train/lb_loss": avg_lb,
-                "train/z_loss": avg_z,
-                "train/lr": current_lr,
-                "perf/tokens_per_sec": tps,
-            }
-        )
+        step_metrics = {
+            "step": step,
+            "train/loss": total_loss,
+            "train/lm_loss": avg_lm,
+            "train/lb_loss": avg_lb,
+            "train/z_loss": avg_z,
+            "train/lr": current_lr,
+            "perf/tokens_per_sec": tps,
+        }
+        for domain, loss in train_domain_losses.items():
+            step_metrics[f"train/loss_{domain}"] = loss
+        local_logger.log(step_metrics)
 
         # console
         if step % 10 == 0 or step == start_step:
@@ -763,6 +834,7 @@ def train(args: argparse.Namespace) -> None:
                 lb_coef,
                 z_coef,
                 n_experts,
+                non_blocking_transfer=non_blocking_transfer,
             )
             for k, v in eval_results.items():
                 print(f"  {k}: {v:.4f}")
@@ -782,6 +854,8 @@ def train(args: argparse.Namespace) -> None:
             tracking.log_eval(
                 step=step,
                 eval_loss=eval_results["eval/loss"],
+                eval_lm_loss=eval_results["eval/lm_loss"],
+                eval_perplexity=eval_results["eval/perplexity"],
                 domain_losses=domain_losses or None,
                 domain_perplexities=domain_ppls or None,
             )
