@@ -16,7 +16,8 @@
       "Bash(GIT_EDITOR=true git log:*)",
       "Bash(ls:*)",
       "WebFetch(domain:docs.primeintellect.ai)",
-      "WebFetch(domain:www.primeintellect.ai)"
+      "WebFetch(domain:www.primeintellect.ai)",
+      "Bash(ssh:*)"
     ]
   }
 }
