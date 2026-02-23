@@ -8,6 +8,12 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 - The load balancing problem - what happens without auxiliary loss
 - Routing patterns - heatmaps of which tokens → which experts
 
+## Trained Models
+
+Checkpoints are on HuggingFace: [sumitdotml/moe-emergence](https://huggingface.co/sumitdotml/moe-emergence)
+
+Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence/runs/fqhfblfv), [MoE main run](https://wandb.ai/sumit-ml/moe-emergence/runs/j08s2d1m)
+
 ## Progress Log
 
 ### Phase 1: MoE Components [DONE]
