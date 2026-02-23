@@ -34,17 +34,18 @@ may not actually be available when you try to deploy, even if it shows in the li
 
 ## Budget Math
 
-| Run               | Preset    | Max Steps         | Est. Time | Cost Formula            |
-| ----------------- | --------- | ----------------- | --------- | ----------------------- |
-| Dense shakedown   | shakedown | 100               | ~2 min    | `(2/60) * live_rate`    |
-| MoE shakedown     | shakedown | 100               | ~3 min    | `(3/60) * live_rate`    |
-| Dense baseline    | dense     | 5000              | ~1.5 hr   | `1.5 * live_rate`       |
-| MoE main          | moe-main  | 10000             | ~4 hr     | `4.0 * live_rate`       |
-| No-LB ablation    | no-lb     | 2000 (early-stop) | ~1 hr     | `1.0 * live_rate`       |
-| Top-2 directional | top2      | 3000              | ~1.5 hr   | `1.5 * live_rate`       |
+| Run               | Preset    | Max Steps         | Est. Time | Actual Time | Cost @ $0.61/hr |
+| ----------------- | --------- | ----------------- | --------- | ----------- | --------------- |
+| Dense shakedown   | shakedown | 100               | ~2 min    | ~2 min      | ~$0.02          |
+| MoE shakedown     | shakedown | 100               | ~3 min    | ~3 min      | ~$0.03          |
+| Dense baseline    | dense     | 5000              | ~1.5 hr   | **~30 min** | **~$0.31**      |
+| MoE main          | moe-main  | 10000             | ~4 hr     | **~85 min** | **~$0.86**      |
+| No-LB ablation    | no-lb     | 2000 (early-stop) | ~1 hr     | TBD         | TBD             |
+| Top-2 directional | top2      | 3000              | ~1.5 hr   | TBD         | TBD             |
 
-Use `live_rate` from the exact RTX 4090 row returned by `prime availability list`.
-Total runtime budget for planned runs is roughly ~8 hours (+ setup/idle overhead).
+**Note:** Original time estimates were 3-4x too conservative. RTX 4090 throughput is
+~25.7k tok/s (dense) and ~14.2k tok/s (MoE), much higher than budgeted. Total spend
+so far: ~$1.69 of $80 budget (includes setup/idle overhead + disk billing).
 
 ---
 
