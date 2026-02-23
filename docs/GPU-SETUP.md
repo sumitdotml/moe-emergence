@@ -16,8 +16,21 @@ Migration checklist for running MoE Emergence training on PrimeIntellect.
 RTX 4090 (24GB VRAM) is the right pick. GPT-2 small + 8 experts is well under 24GB
 for this project, and A100-class options are usually unnecessary for these runs.
 
-Verify current rates in the PrimeIntellect dashboard before booking - pricing and
-free-credit promos can change.
+All 1x RTX 4090 options across regions are **the same price (~$0.61/hr)** but differ
+in vCPUs and RAM. Compare regions before committing:
+
+```bash
+prime availability list --gpu-type RTX4090_24GB --gpu-count 1 -o json | python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())['gpu_resources']
+for x in sorted(data, key=lambda x: -int(str(x['memory_gb']).split('-')[0])):
+    print(f\"{x['id']}  {x['location']:4s}  stock={x['stock_status']:6s}  \${x['price_value']:.2f}/hr  vCPUs={x['vcpus']:>5s}  RAM={x['memory_gb']}GB\")
+"
+```
+
+Pick the region with the best specs. Watch the **stock level** — "Low" means the GPU
+may not actually be available when you try to deploy, even if it shows in the listing.
+"High" stock is more reliable.
 
 ## Budget Math
 
@@ -39,55 +52,69 @@ Total runtime budget for planned runs is roughly ~8 hours (+ setup/idle overhead
 
 - [ ] Create PrimeIntellect account at https://www.primeintellect.ai
 - [ ] Claim any active signup promo/credit currently shown in the app
-- [ ] Add billing / payment method
+- [ ] Add billing / payment method (disk and pod creation will fail without this)
 - [ ] Generate SSH key if needed (`ssh-keygen -t ed25519`)
-- [ ] Register public key in PrimeIntellect profile settings
+- [ ] Register public key under **Keys & Secrets** in the PrimeIntellect dashboard
 - [ ] Get W&B API key from https://wandb.ai/authorize (will need it on the instance)
 
 ## Install CLI (Local)
 
 ```bash
 uv tool install prime
-prime login                     # preferred auth flow
+prime login                                   # preferred auth flow
 # optional alternative if needed:
 # prime config set-api-key
-prime config set-ssh-key-path   # point to your private key
-prime config view               # verify auth + ssh key path
+prime config set-ssh-key-path ~/.ssh/id_ed25519   # point to your private key
+prime config view                                 # verify auth + ssh key path
 ```
 
 ## Create Persistent Storage
 
 Persistent storage keeps checkpoints, datasets, and logs across instance restarts.
-CLI path (recommended):
+
+**Important:** Runpod uses ~40GB of disk for the container filesystem. Only the
+remainder is usable volume. For example, 300GB disk = ~260GB usable. The cost
+difference is negligible (~$0.03/hr for 300GB vs 100GB), so size up.
 
 ```bash
-# pick a storage option in your target region/datacenter
-prime availability disks --regions united_states
+# list disk options (omit --regions to see all)
+prime availability disks
 
-# create disk (example size: 100GB)
-prime disks create --id <disk-option-id> --size 100 --name moe-emergence
+# create disk — use --yes to skip interactive prompt
+prime disks create --id <disk-option-id> --size 300 --name moe-emergence --yes
 
-# confirm disk ID + status
-prime disks list
+# confirm disk ID + status (wait for ACTIVE)
+prime disks get <disk-id>
 ```
 
 Notes:
-- Choose disk location first, then schedule GPUs in the same location.
-- Disks are billed continuously until you terminate them.
+- Choose disk location first, then schedule GPUs in the same provider + datacenter.
+- Disks are billed continuously (~$0.033/hr for 300GB) until you terminate them.
+- Verify GPU availability in your chosen region *before* creating the disk —
+  "Low" stock regions may have no GPUs when you actually try to deploy.
 
 ## Launch Instance
 
 ```bash
 # find 4090 capacity compatible with your existing disk location
-prime availability list --gpu-type RTX_4090 --disks <disk-id>
+prime availability list --gpu-type RTX4090_24GB --disks <disk-id>
 
-# create pod and attach disk
-prime pods create --id <gpu-option-id> --name moe-train --disks <disk-id>
+# create pod — all flags needed to avoid interactive prompts
+prime pods create \
+  --id <gpu-option-id> \
+  --name moe-train \
+  --disk-size 120 \
+  --disks <disk-id> \
+  --image cuda_12_4_pytorch_2_4 \
+  --yes
 ```
+
+Available images include `cuda_12_4_pytorch_2_4`, `cuda_12_1_pytorch_2_2`, and
+others. Pick the latest PyTorch + CUDA combo.
 
 After deploy, note:
 - Pod ID (`prime pods list`)
-- Mount path / attached disk info (`prime pods status <pod-id>`)
+- Mount path for persistent disk (`prime pods status <pod-id>` — typically `/workspace`)
 
 ## Connect
 
@@ -105,7 +132,7 @@ Run these once after first SSH:
 nvidia-smi
 
 # clone repo to persistent storage so it survives restarts
-cd /mnt/shared   # replace with actual mounted disk path from pod status
+cd /workspace   # persistent disk mount path (confirm via prime pods status)
 git clone https://github.com/sumitdotml/moe-emergence.git
 cd moe-emergence
 
@@ -181,7 +208,7 @@ If the instance dies mid-run, relaunch and resume:
 ```bash
 # reconnect
 prime pods ssh <pod-id>
-cd /mnt/shared/moe-emergence
+cd /workspace/moe-emergence
 
 # resume from latest checkpoint (sort -V orders by step number)
 uv run python -m moe_emergence.train --preset moe-main --run-name moe-main \
@@ -197,15 +224,15 @@ After training completes, pull artifacts locally:
 
 ```bash
 # from your local machine; get host/port from: prime pods status <pod-id>
-scp -P <port> -r <user>@<host>:/mnt/shared/moe-emergence/checkpoints/ ./checkpoints/
-scp -P <port> -r <user>@<host>:/mnt/shared/moe-emergence/checkpoints/*/metrics.jsonl ./local-metrics/
+scp -P <port> -r root@<host>:/workspace/moe-emergence/checkpoints/ ./checkpoints/
+scp -P <port> -r root@<host>:/workspace/moe-emergence/checkpoints/*/metrics.jsonl ./local-metrics/
 ```
 
 Or use `rsync` for incremental transfers:
 
 ```bash
 rsync -avz -e "ssh -p <port>" \
-  <user>@<host>:/mnt/shared/moe-emergence/checkpoints/ ./checkpoints/
+  root@<host>:/workspace/moe-emergence/checkpoints/ ./checkpoints/
 ```
 
 W&B metrics sync automatically if online mode is working.
@@ -213,11 +240,11 @@ W&B metrics sync automatically if online mode is working.
 ## Teardown
 
 ```bash
-# terminate instance when done (stops billing)
+# terminate instance when done (stops GPU billing)
 prime pods terminate <pod-id>
 
-# disk keeps billing until terminated
-prime disks terminate <disk-id>
+# disk keeps billing (~$0.033/hr) until terminated
+prime disks terminate <disk-id> --yes
 ```
 
 ## Troubleshooting
@@ -228,7 +255,9 @@ prime disks terminate <disk-id>
 | Still OOM           | `--block-size 256` (halves sequence memory)                        |
 | W&B auth failure    | Run `uv run wandb login --verify`, then rerun preflight             |
 | W&B offline         | Runs still work, logs to local JSONL. Sync later with `wandb sync` |
-| Disk not attachable | Instance must be in same provider + datacenter as disk             |
+| Disk not attachable | Disk and pod must be same provider + datacenter                    |
+| No GPU found        | "Low" stock region sold out. Delete disk, recreate in another region |
+| Payment required    | Add payment method at dashboard/billing before creating resources   |
 | Slow data loading   | First run downloads datasets (~30MB). Cached after that            |
 
 ## References
