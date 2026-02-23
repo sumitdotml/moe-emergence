@@ -128,6 +128,9 @@ prime pods ssh <pod-id>
 Run these once after first SSH:
 
 ```bash
+# install tmux (not pre-installed on runpod images)
+apt-get update && apt-get install -y tmux
+
 # check CUDA is working
 nvidia-smi
 
@@ -178,6 +181,23 @@ Check your W&B project page immediately for:
 
 If W&B auth/network fails, training still continues and local metrics are written to:
 `checkpoints/<run-name>/metrics.jsonl`.
+
+## Use tmux for Training
+
+**Always run training inside tmux.** Training runs take 30–60+ minutes. If your SSH
+connection drops without tmux, the run dies and you lose progress since the last
+checkpoint.
+
+```bash
+# start a new tmux session
+tmux new -s train
+
+# if reconnecting after disconnect:
+tmux attach -t train
+```
+
+Run all training commands inside the tmux session. You can detach with `Ctrl-b d`
+and reattach later from a new SSH connection.
 
 ## Run Training
 
