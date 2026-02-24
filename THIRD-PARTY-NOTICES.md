@@ -35,6 +35,20 @@ More will be added as I continue to develop this project.
 - **Source:** https://github.com/numpy/numpy
 - **Usage:** Numerical operations
 
+### Weights & Biases (wandb)
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2021 Weights and Biases, Inc.
+- **Source:** https://github.com/wandb/wandb
+- **Usage:** Experiment tracking and metric logging
+
+### Safetensors
+
+- **License:** Apache License 2.0
+- **Copyright:** Copyright 2022-present Hugging Face Inc.
+- **Source:** https://github.com/huggingface/safetensors
+- **Usage:** Model checkpoint serialization format
+
 ---
 
 ## Pretrained Models
