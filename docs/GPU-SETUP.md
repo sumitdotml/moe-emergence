@@ -40,12 +40,12 @@ may not actually be available when you try to deploy, even if it shows in the li
 | MoE shakedown     | shakedown | 100               | ~3 min    | ~3 min      | ~$0.03          |
 | Dense baseline    | dense     | 5000              | ~1.5 hr   | **~30 min** | **~$0.31**      |
 | MoE main          | moe-main  | 10000             | ~4 hr     | **~85 min** | **~$0.86**      |
-| No-LB ablation    | no-lb     | 2000 (early-stop) | ~1 hr     | TBD         | TBD             |
-| Top-2 directional | top2      | 3000              | ~1.5 hr   | TBD         | TBD             |
+| No-LB ablation    | no-lb     | 2000 (early-stop) | ~1 hr     | **~5 min**  | **~$0.05**      |
+| Top-2 directional | top2      | 10000 (override)  | ~1.5 hr   | **~48 min** | **~$0.49**      |
 
 **Note:** Original time estimates were 3-4x too conservative. RTX 4090 throughput is
-~25.7k tok/s (dense) and ~14.2k tok/s (MoE), much higher than budgeted. Total spend
-so far: ~$1.69 of $80 budget (includes setup/idle overhead + disk billing).
+~25.7k tok/s (dense), ~14.2k tok/s (MoE top-1), and ~18.9k tok/s (MoE top-2). Total
+spend: ~$2.79 of $80 budget (includes setup/idle overhead + disk billing). All runs complete.
 
 ---
 

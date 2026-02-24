@@ -12,7 +12,7 @@ To train a small MoE model on 3 distinct domains (code, math, natural language),
 
 Checkpoints are on HuggingFace: [sumitdotml/moe-emergence](https://huggingface.co/sumitdotml/moe-emergence)
 
-Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence/runs/fqhfblfv), [MoE main run](https://wandb.ai/sumit-ml/moe-emergence/runs/j08s2d1m)
+Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence/runs/fqhfblfv), [MoE main](https://wandb.ai/sumit-ml/moe-emergence/runs/j08s2d1m), [no-LB ablation](https://wandb.ai/sumit-ml/moe-emergence/runs/06pljhrv), [top-2 directional](https://wandb.ai/sumit-ml/moe-emergence/runs/6mw6qbac)
 
 ## Progress Log
 
@@ -53,14 +53,14 @@ Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence
 - [x] Safetensors model snapshots + JSON sidecar, full resume `.pt` checkpoints
 - [x] Collapse detection, W&B tracking, local JSONL fallback
 - [x] Package-safe imports (`moe_emergence.*`)
-- [ ] Shakedown runs (dense + MoE)
-- [ ] Budgeted runs (dense → moe-main → no-lb → top2)
+- [x] Shakedown runs (dense + MoE)
+- [x] Budgeted runs (dense → moe-main → no-lb → top2)
 
 ### Phase 5: Experiments
 
-- [ ] MoE main run (8 experts, top-1, LB on)
-- [ ] Ablation: no load balancing (expect collapse)
-- [ ] Ablation: top-2 routing (optional, if budget allows)
+- [x] MoE main run (8 experts, top-1, LB on) — eval/loss=2.080, beats dense by 3.6%
+- [x] Ablation: no load balancing — collapsed at step 500, confirms LB loss is essential
+- [x] Ablation: top-2 routing — eval/loss=2.077, marginal 0.14% over top-1
 
 ### Phase 6: Analysis
 

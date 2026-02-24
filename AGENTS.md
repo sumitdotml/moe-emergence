@@ -174,15 +174,19 @@ Open items from cross-model audit (debate 008):
   - Multi-model debates: data pipeline (005\*.md), tracking review (006)
   - Full project audit (007) + cross-model convergence review (008)
   - Phase 4 training plan reviewed and amended (debate 009)
-- Phase 4 (Training) [IN PROGRESS — 2 of 4 budgeted runs complete]
+- Phase 4 (Training) [DONE — all 4 budgeted runs complete]
   - Infrastructure: `train.py` with presets, grad accum, eval, checkpointing/resume, collapse detection
-  - GPU setup: PrimeIntellect RTX 4090 (Norway), see `docs/GPU-SETUP.md`
+  - GPU setup: PrimeIntellect RTX 4090, see `docs/GPU-SETUP.md`
   - **run-003**: GPU shakedown — both dense & MoE passed (`docs/experiments/run-003-gpu-shakedown-primeintellect.md`)
   - **run-004**: Dense baseline — eval/loss=2.157, 5000 steps, ~30min (`docs/experiments/run-004-dense-baseline.md`)
   - **run-005**: MoE main run — eval/loss=2.080, 10000 steps, ~85min (`docs/experiments/run-005-moe-main.md`)
+  - **run-006**: No-LB ablation — collapsed at step 500, confirms LB loss is essential (`docs/experiments/run-006-no-lb-ablation.md`)
+  - **run-007**: Top-2 directional — eval/loss=2.077, 10000 steps, ~48min, marginal 0.14% over top-1 (`docs/experiments/run-007-top2-directional.md`)
   - MoE beats dense by 3.6% overall, 14% on math, 2.1% on code; dense wins prose by 1.6%
+  - Top-2 does not meaningfully outperform top-1; validates top-1 routing choice
+  - Without LB loss, expert collapse within 500 steps; z-loss alone doesn't prevent it
 
-**Current Phase:** Phase 4 — ablation runs remaining (no-lb, top-2)
+**Current Phase:** Phase 5 — post-training analysis and visualization
 
 **Training Plan:** `docs/project-design/PHASE-4-TRAINING-PLAN.md` (reviewed, amended with debate 009 resolutions)
 
@@ -201,14 +205,16 @@ Open items from cross-model audit (debate 008):
 - Resume RNG restoration hardened for MPS/CPU byte-state requirements
 - Documentation added: `docs/code-reviews/006-2026-02-18-phase4-training-review.md`, `docs/code-reviews/007-2026-02-18-phase4-training-fix.md`, `docs/experiments/run-002-phase4-hardening-shakedown.md`
 
-**Phase 4 Training Results (2026-02-23/24):**
-- GPU: PrimeIntellect RTX 4090 24GB (Norway EUR-NO-1), $0.61/hr
+**Phase 4 Training Results (2026-02-23/24/25):**
+- GPU: PrimeIntellect RTX 4090 24GB, $0.61/hr (Norway for runs 003-005, Romania for 006-007)
 - Shakedown: both modes passed, lb_loss=1.05, no collapse (run-003)
 - Dense baseline: eval/loss=2.157, ppl=8.64, ~25.7k tok/s, ~30min (run-004)
 - MoE main: eval/loss=2.080, ppl=7.91, ~14.2k tok/s, ~85min (run-005)
+- No-LB ablation: collapsed at step 500, expert 1 in layer 9 captured 73.6% of tokens (run-006)
+- Top-2 directional: eval/loss=2.077, ppl=7.89, ~18.9k tok/s, ~48min (run-007)
 - MoE crossed dense at step ~3600 (36% of training), plateaued by step ~8000
-- Total GPU cost so far: ~$1.69 (includes setup/idle time, shakedown, dense, MoE)
-- Artifacts downloaded locally to `checkpoints/` (final models + resume ckpts + metrics)
+- Total GPU cost: ~$2.79 (includes setup/idle time, shakedown, all 4 runs, disk)
+- All artifacts downloaded locally to `checkpoints/` and uploaded to HuggingFace
 
 **Verified Decisions:**
 
@@ -240,20 +246,22 @@ These items require verification before implementation. Must not assume they are
 **Next Actions:**
 
 1. ~~Run budgeted experiments: dense → moe-main~~ [DONE]
-2. Run ablation experiments on PrimeIntellect (re-provision GPU, see `docs/GPU-SETUP.md`):
-   - No-LB ablation: `uv run python -m moe_emergence.train --preset no-lb --run-name no-lb-ablation --device cuda`
-   - Top-2 directional (optional): `uv run python -m moe_emergence.train --preset top2 --run-name top2-directional --device cuda`
-3. Upload models to HuggingFace (planned)
-4. Begin Phase 5 post-training analysis and visualization
+2. ~~Run ablation experiments: no-lb → top-2~~ [DONE]
+3. ~~Upload models to HuggingFace~~ [DONE — `sumitdotml/moe-emergence`]
+4. Phase 5: post-training analysis and visualization (all runs on CPU/MPS locally)
+   - Domain-level expert activation analysis (which experts specialize on which domains)
+   - Fine-grained token-type routing (Python keywords vs operators vs strings)
+   - Router entropy over training visualization
+   - Collapse comparison visualization (with LB vs without LB)
+   - Publication-quality figures for technical report
 
 ## Budget Constraint
 
-$80 GPU budget. Spent so far: ~$1.69 (includes setup/idle overhead). Remaining: ~$78.31.
+$80 GPU budget. Total spent: ~$2.79 (includes setup/idle/disk overhead). Remaining: ~$77.21.
 
-Completed:
+All training runs complete:
 1. ~~Dense baseline~~ ($0.31)
 2. ~~MoE main run~~ ($0.86)
-
-Remaining:
-3. No-LB collapse ablation (required, early-stop) — est. ~$0.40
-4. Top-2 ablation (optional, short run) — est. ~$0.60
+3. ~~No-LB ablation~~ ($0.05)
+4. ~~Top-2 directional~~ ($0.49)
+5. Setup/idle/disk overhead (~$1.08)
