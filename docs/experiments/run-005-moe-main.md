@@ -164,6 +164,11 @@ After token balancing: 4296 blocks/domain, 12,888 total (~6.6M tokens).
 MoE leads on aggregate loss (-3.6%), math (-14.0%), and code (-2.1%).
 Dense wins on prose (+1.6%) — expert routing doesn't help diverse web text.
 
+> Note: These runs are not step-matched (5000 dense vs 10000 MoE), so the delta
+> combines architecture effect and extra optimization budget. However, the dense
+> model had plateaued by step ~3600 (see run-004), so additional steps would not
+> have closed the gap.
+
 ### Key Observations
 
 1. **Math is the biggest MoE win.** Loss improved 14% over dense — the most structured
@@ -320,8 +325,6 @@ Next steps:
 1. No-LB ablation (run-006) — confirm that load balancing prevents expert collapse.
 2. Top-2 directional (run-007, optional) — test whether top-2 routing helps prose.
 3. Phase 5: routing analysis, expert specialization visualizations, technical report.
-
----
 
 ## Artifacts
 
