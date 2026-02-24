@@ -50,17 +50,16 @@ Use this exact shape for new entries.
 
 ## Entries
 
-### MISTAKE-YYYYMMDD-001
-- id:
+### MISTAKE-20260225-001
+- id: MISTAKE-20260225-001
 - status: active
-- severity:
-- scope_tags: []
-- pattern:
-- prevention_rule:
-- validation_check:
-- first_seen:
-- last_seen:
-- occurrence_count:
+- severity: medium
+- scope_tags: [docs]
+- pattern: Using `--` (em-dash) for dramatic effect or list continuation instead of removable parenthetical phrases. Writing-style rule: em-dashes are ONLY for content that can be removed without losing core meaning.
+- prevention_rule: Before using `--`, verify the clause between dashes can be deleted and the sentence still makes sense. If it can't, use a period, semicolon, or restructure.
+- validation_check: For every `--` in edited text, mentally remove the dashed clause and confirm the sentence is grammatically complete and retains its core meaning.
+- first_seen: 2026-02-25
+- last_seen: 2026-02-25
+- occurrence_count: 1
 - evidence:
-  - file:
-  - commit:
+  - file:checkpoints/README.md:46 (attempted "Expert collapse at step 500 -- single expert handles 73.6%", rejected by user)
