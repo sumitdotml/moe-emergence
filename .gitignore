@@ -19,6 +19,9 @@ wandb/
 # Training artifacts
 checkpoints/
 
+# Analysis figures
+figures/
+
 .DS_Store
 
 !.claude/
