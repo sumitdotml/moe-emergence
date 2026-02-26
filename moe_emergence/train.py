@@ -57,7 +57,9 @@ REPO_ROOT = Path(__file__).parent.parent
 CACHE_DIR = REPO_ROOT / ".cache"
 
 
-# ::: Preset definitions :::
+####################################
+####### PRESET DEFINITIONS ########
+####################################
 
 PRESETS = {
     "shakedown": dict(
@@ -123,9 +125,9 @@ PRESETS = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Reproducibility
-# ---------------------------------------------------------------------------
+#################################
+####### REPRODUCIBILITY ########
+#################################
 
 
 def seed_everything(seed: int) -> None:
@@ -136,9 +138,9 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-# ---------------------------------------------------------------------------
-# Device selection
-# ---------------------------------------------------------------------------
+##################################
+####### DEVICE SELECTION ########
+##################################
 
 
 def select_device(requested: str) -> torch.device:
@@ -151,9 +153,9 @@ def select_device(requested: str) -> torch.device:
     return torch.device("cpu")
 
 
-# ---------------------------------------------------------------------------
-# Checkpointing
-# ---------------------------------------------------------------------------
+###############################
+####### CHECKPOINTING ########
+###############################
 
 FORMAT_VERSION = 1
 
@@ -274,9 +276,9 @@ def enforce_retention(run_dir: Path, keep_last_k: int) -> None:
         ckpts.pop(0).unlink()
 
 
-# ---------------------------------------------------------------------------
-# Collapse detection (no-lb preset)
-# ---------------------------------------------------------------------------
+###################################################
+####### COLLAPSE DETECTION (NO-LB PRESET) ########
+###################################################
 
 
 def check_collapse(
@@ -300,9 +302,9 @@ def check_collapse(
     return False, ""
 
 
-# ---------------------------------------------------------------------------
-# Local metric logger (JSONL safety net)
-# ---------------------------------------------------------------------------
+#######################################################
+####### LOCAL METRIC LOGGER (JSONL SAFETY NET) ########
+#######################################################
 
 
 class LocalMetricLogger:
@@ -314,9 +316,9 @@ class LocalMetricLogger:
             f.write(json.dumps(metrics) + "\n")
 
 
-# ---------------------------------------------------------------------------
-# Infinite data iterator
-# ---------------------------------------------------------------------------
+########################################
+####### INFINITE DATA ITERATOR ########
+########################################
 
 
 def infinite_loader(loader: DataLoader):
@@ -341,9 +343,9 @@ def compute_sequence_lm_losses(
     return token_losses.view(batch_size, -1).mean(dim=1)
 
 
-# ---------------------------------------------------------------------------
-# Eval
-# ---------------------------------------------------------------------------
+#####################
+####### EVAL ########
+#####################
 
 
 @torch.no_grad()
@@ -418,11 +420,15 @@ def run_eval(
     return result
 
 
-# ::: Main training function :::
+########################################
+####### MAIN TRAINING FUNCTION ########
+########################################
 
 
 def train(args: argparse.Namespace) -> None:
-    # ::: resolve preset :::
+    ###############################
+    ####### RESOLVE PRESET ########
+    ###############################
     preset_cfg = PRESETS[args.preset].copy()
 
     # CLI overrides
@@ -456,7 +462,9 @@ def train(args: argparse.Namespace) -> None:
     n_experts = args.num_experts
     collapse_early_stop = args.preset == "no-lb"
 
-    # ::: config dict for logging/checkpointing :::
+    ######################################################
+    ####### CONFIG DICT FOR LOGGING/CHECKPOINTING ########
+    ######################################################
     config = {
         "preset": args.preset,
         "mode": mode,
@@ -484,7 +492,9 @@ def train(args: argparse.Namespace) -> None:
         "collapse_early_stop": collapse_early_stop,
     }
 
-    # ::: setup :::
+    ######################
+    ####### SETUP ########
+    ######################
     seed_everything(args.seed)
     device = select_device(args.device)
     print(f"Device: {device}")
@@ -499,7 +509,9 @@ def train(args: argparse.Namespace) -> None:
 
     local_logger = LocalMetricLogger(run_dir)
 
-    # ::: W&B init :::
+    #########################
+    ####### W&B INIT ########
+    #########################
     tags = [args.preset, mode]
     try:
         tracking.init_run(
@@ -511,24 +523,38 @@ def train(args: argparse.Namespace) -> None:
             offline=args.wandb_offline,
         )
     except Exception as e:
-        print(f"W&B online init failed ({e}), falling back to offline")
-        try:
-            tracking.init_run(
-                config=config,
-                project=args.wandb_project,
-                entity=args.wandb_entity,
-                name=args.run_name,
-                tags=tags,
-                offline=True,
-            )
-        except Exception:
-            print("W&B unavailable, continuing without tracking")
+        if not tracking.is_wandb_exception(e):
+            raise
 
-    # ::: tokenizer :::
+        if args.wandb_offline:
+            print(f"W&B offline init failed ({e}), continuing without tracking")
+        else:
+            print(f"W&B online init failed ({e}), falling back to offline")
+            try:
+                tracking.init_run(
+                    config=config,
+                    project=args.wandb_project,
+                    entity=args.wandb_entity,
+                    name=args.run_name,
+                    tags=tags,
+                    offline=True,
+                )
+            except Exception as offline_error:
+                if not tracking.is_wandb_exception(offline_error):
+                    raise
+                print(
+                    f"W&B offline init failed ({offline_error}), continuing without tracking"
+                )
+
+    ##########################
+    ####### TOKENIZER ########
+    ##########################
     hf_cache = str(CACHE_DIR / "huggingface")
     tokenizer = AutoTokenizer.from_pretrained("gpt2", cache_dir=hf_cache)
 
-    # ::: data :::
+    #####################
+    ####### DATA ########
+    #####################
     print(f"\nLoading datasets ({preset_cfg['size_mb']}MB per domain)...")
     code_texts, _ = load_code_data(max_size_mb=preset_cfg["size_mb"])
     math_texts, _ = load_math_data(max_size_mb=preset_cfg["size_mb"])
@@ -602,7 +628,9 @@ def train(args: argparse.Namespace) -> None:
 
     print(f"Train: {len(train_dataset)} blocks | Eval: {len(eval_dataset)} blocks")
 
-    # ::: model :::
+    ######################
+    ####### MODEL ########
+    ######################
     print("\nLoading GPT-2...")
     model = GPT2LMHeadModel.from_pretrained("gpt2", cache_dir=hf_cache)
 
@@ -619,7 +647,9 @@ def train(args: argparse.Namespace) -> None:
     model = model.to(device)
     model.train()
 
-    # ::: optimizer + scheduler :::
+    ######################################
+    ####### OPTIMIZER + SCHEDULER ########
+    ######################################
     optimizer = AdamW(
         model.parameters(),
         lr=args.learning_rate,
@@ -631,12 +661,16 @@ def train(args: argparse.Namespace) -> None:
         num_training_steps=max_steps,
     )
 
-    # ::: noise annealing :::
+    ################################
+    ####### NOISE ANNEALING ########
+    ################################
     if is_moe:
         for moe in moe_modules.values():
             moe.router.set_noise_annealing(max_steps, anneal_fraction=0.25)
 
-    # ::: resume :::
+    #######################
+    ####### RESUME ########
+    #######################
     start_step = 0
     best_eval_loss = float("inf")
 
@@ -667,7 +701,9 @@ def train(args: argparse.Namespace) -> None:
         )
         print(f"Existing best model at eval_loss={best_eval_loss:.4f}")
 
-    # ::: training loop :::
+    ##############################
+    ####### TRAINING LOOP ########
+    ##############################
     print(f"\n{'=' * 60}")
     print(f"Starting training: steps {start_step} → {max_steps}")
     print(
@@ -683,7 +719,9 @@ def train(args: argparse.Namespace) -> None:
     step_start_time = time.time()
 
     for step in range(start_step, max_steps):
-        # ::: accumulation loop :::
+        ##################################
+        ####### ACCUMULATION LOOP ########
+        ##################################
         accum_lm = 0.0
         accum_lb = 0.0
         accum_z = 0.0
@@ -740,7 +778,9 @@ def train(args: argparse.Namespace) -> None:
 
             tokens_processed += input_ids.numel()
 
-        # ::: optimizer step :::
+        ###############################
+        ####### OPTIMIZER STEP ########
+        ###############################
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         optimizer.step()
         scheduler.step()
@@ -750,7 +790,9 @@ def train(args: argparse.Namespace) -> None:
             for moe in moe_modules.values():
                 moe.router.step()
 
-        # ::: averaged metrics for this step :::
+        ###############################################
+        ####### AVERAGED METRICS FOR THIS STEP ########
+        ###############################################
         avg_lm = accum_lm / args.grad_accum_steps
         avg_lb = accum_lb / args.grad_accum_steps
         avg_z = accum_z / args.grad_accum_steps
@@ -761,7 +803,9 @@ def train(args: argparse.Namespace) -> None:
             if count > 0
         }
 
-        # ::: logging :::::
+        ########################
+        ####### LOGGING ########
+        ########################
         elapsed = time.time() - step_start_time
         tps = tokens_processed / elapsed if elapsed > 0 else 0
 
@@ -804,7 +848,9 @@ def train(args: argparse.Namespace) -> None:
                 f"lr {current_lr:.2e} | {tps:.0f} tok/s"
             )
 
-        # ::: collapse detection (no-lb) :::
+        ############################################
+        ####### COLLAPSE DETECTION (NO-LB) ########
+        ############################################
         if collapse_early_stop and is_moe and last_aux and step % 100 == 0:
             collapsed, reason = check_collapse(last_aux, n_experts)
             if collapsed:
@@ -823,7 +869,9 @@ def train(args: argparse.Namespace) -> None:
             else:
                 collapse_counter = 0
 
-        # ::: eval :::
+        #####################
+        ####### EVAL ########
+        #####################
         if step > 0 and step % preset_cfg["eval_every"] == 0:
             print(f"\n--- Eval at step {step} ---")
             eval_results = run_eval(
@@ -881,7 +929,9 @@ def train(args: argparse.Namespace) -> None:
                 )
                 print(f"  New best model saved (eval_loss={eval_loss:.4f})")
 
-        # ::: checkpointing :::
+        ##############################
+        ####### CHECKPOINTING ########
+        ##############################
         if step > 0 and step % preset_cfg["save_every"] == 0:
             ckpt_path = run_dir / f"ckpt-step-{step}.pt"
             save_full_checkpoint(
@@ -913,7 +963,9 @@ def train(args: argparse.Namespace) -> None:
         tokens_processed = 0
         step_start_time = time.time()
 
-    # ::: final save :::
+    ###########################
+    ####### FINAL SAVE ########
+    ###########################
     if start_step >= max_steps:
         print(
             f"\nRun already complete (resumed at step {start_step}, max_steps={max_steps})."

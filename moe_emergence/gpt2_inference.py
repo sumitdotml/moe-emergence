@@ -161,7 +161,7 @@ def main():
         total_params = sum(p.numel() for p in model.parameters())
         print(f"Total parameters: {total_params:,} (~{total_params / 1e6:.1f}M)")
 
-    model = model.to(device)  # type: ignore[arg-type]
+    model = model.to(str(device))
     model.eval()
 
     if is_moe:

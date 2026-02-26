@@ -26,6 +26,21 @@ except ImportError:
     wandb = None
 
 
+def is_wandb_exception(error: Exception) -> bool:
+    """Returns True when an exception originates from wandb internals."""
+    if type(error).__module__.startswith("wandb"):
+        return True
+
+    tb = error.__traceback__
+    while tb is not None:
+        filename = tb.tb_frame.f_code.co_filename.replace("\\", "/")
+        if "/wandb/" in filename:
+            return True
+        tb = tb.tb_next
+
+    return False
+
+
 def init_run(
     config: dict,
     project: str = "moe-emergence",
