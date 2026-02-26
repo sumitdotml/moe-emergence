@@ -65,6 +65,12 @@ class MoEWrapper(nn.Module):
         >>> block.mlp = moe  # gotta do this to replace the MLP with MoE
     """
 
+    n_experts: int
+    topk: int
+    router: Router
+    experts: nn.ModuleList
+    last_aux: Optional[MoEWrapperOutput]
+
     def __init__(
         self,
         original_mlp: nn.Module,
@@ -76,8 +82,8 @@ class MoEWrapper(nn.Module):
     ) -> None:
         super().__init__()
         assert topk <= n_experts, f"topk ({topk}) cannot exceed n_experts ({n_experts})"
-        self.n_experts = n_experts
-        self.topk = topk
+        object.__setattr__(self, "n_experts", n_experts)
+        object.__setattr__(self, "topk", topk)
 
         self.router = Router(
             hidden_dim=hidden_dim,
@@ -86,13 +92,17 @@ class MoEWrapper(nn.Module):
             noise_std=noise_std,
         )
 
-        # :::warm-start:::
+        ###########################
+        ####### WARM-START ########
+        ###########################
         # creating experts as EXACT COPIES of original MLP. at step 0, any
         # expert produces the same output as the original MLP would have
         self.experts = nn.ModuleList()
         for _ in range(n_experts):
             expert = copy.deepcopy(original_mlp)
-            # :::symmetry breaking:::
+            ##################################
+            ####### SYMMETRY BREAKING ########
+            ##################################
             # adding small perturbation for symmetry breaking. without this, all experts would
             # receive identical gradients
             # scale: 1e-3 * parameter std (NOT norm, see project design doc: MOE-PROJECT-DESIGN-V3.md)
@@ -103,9 +113,11 @@ class MoEWrapper(nn.Module):
 
             self.experts.append(expert)
 
-        # :::storage for auxiliary outputs:::
+        ##############################################
+        ####### STORAGE FOR AUXILIARY OUTPUTS ########
+        ##############################################
         # retrieved after forward pass for loss computation
-        self.last_aux: Optional[MoEWrapperOutput] = None
+        object.__setattr__(self, "last_aux", None)
 
     def forward(self, hidden_states: Tensor) -> Tensor:
         """
@@ -140,13 +152,17 @@ class MoEWrapper(nn.Module):
 
         # storing auxiliary outputs for loss computation
         # these are retrieved by the training loop after forward pass
-        self.last_aux = MoEWrapperOutput(
-            router_probs=router_probs,
-            router_probs_clean=router_probs_clean,
-            router_logits=router_logits,
-            topk_indices=topk_indices,
-            topk_weights=topk_weights,
-            entropy=entropy,
+        object.__setattr__(
+            self,
+            "last_aux",
+            MoEWrapperOutput(
+                router_probs=router_probs,
+                router_probs_clean=router_probs_clean,
+                router_logits=router_logits,
+                topk_indices=topk_indices,
+                topk_weights=topk_weights,
+                entropy=entropy,
+            ),
         )
 
         # reshaping back to original shape
@@ -185,7 +201,9 @@ class MoEWrapper(nn.Module):
         return results
 
 
-# :::GPT-2 Surgery: Installing MoE Layers:::
+######################################################
+####### GPT-2 SURGERY: INSTALLING MOE LAYERS ########
+######################################################
 
 
 def install_moe_layers(
@@ -284,7 +302,9 @@ def collect_aux_outputs(moe_modules: dict) -> list[dict]:
     return aux_outputs
 
 
-# :::Quick Verification:::
+###################################
+####### QUICK VERIFICATION ########
+###################################
 
 if __name__ == "__main__":
     # quick test without actually loading GPT-2 to avoid large download
