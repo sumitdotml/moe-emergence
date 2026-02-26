@@ -107,3 +107,46 @@ Use this exact shape for new entries.
   - file:moe_emergence/gpt2_moe.py:85
   - file:moe_emergence/gpt2_moe.py:86
   - file:moe_emergence/gpt2_moe.py:155
+
+### MISTAKE-20260226-004
+- id: MISTAKE-20260226-004
+- status: active
+- severity: medium
+- scope_tags: [docs, planning]
+- pattern: creating model-debate output files in repository root instead of docs/models-debate.
+- prevention_rule: when generating model-debate artifacts in this repository, place files under docs/models-debate unless the user explicitly asks for another location.
+- validation_check: before writing debate artifacts, verify each output path starts with docs/models-debate/.
+- first_seen: 2026-02-26
+- last_seen: 2026-02-26
+- occurrence_count: 2
+- evidence:
+  - file:docs/models-debate/011-PHASE5-ANALYSIS-PLAN-CONVERGENCE-2026-02-26.md:1 (moved from repo root after user correction)
+
+### MISTAKE-20260226-005
+- id: MISTAKE-20260226-005
+- status: active
+- severity: medium
+- scope_tags: [docs, planning]
+- pattern: documenting dependency changes inconsistently across sections of the same plan (summary table and detailed steps disagree).
+- prevention_rule: when plan docs include both a change-summary table and step-by-step instructions, update both sections in the same edit and run a consistency pass before finalizing.
+- validation_check: for each listed dependency in detailed steps, verify it appears in the file-modification summary table (or add explicit note that the summary is intentionally partial).
+- first_seen: 2026-02-26
+- last_seen: 2026-02-26
+- occurrence_count: 1
+- evidence:
+  - file:docs/project-design/PHASE-5-ANALYSIS-PLAN.md:37 (summary table omits pandas)
+  - file:docs/project-design/PHASE-5-ANALYSIS-PLAN.md:48 (step 0 adds pandas)
+
+### MISTAKE-20260226-006
+- id: MISTAKE-20260226-006
+- status: active
+- severity: medium
+- scope_tags: [docs, planning]
+- pattern: creating new docs/models-debate files without repository naming convention prefixes (nnn or nnna/nnnb).
+- prevention_rule: before creating any new docs/models-debate file, inspect existing filenames and assign the next numeric prefix (for example 011 or 011a/011b) with matching style.
+- validation_check: run ls docs/models-debate and confirm each newly created file begins with the intended numeric prefix before finalizing.
+- first_seen: 2026-02-26
+- last_seen: 2026-02-26
+- occurrence_count: 1
+- evidence:
+  - file:docs/models-debate/011-PHASE5-ANALYSIS-PLAN-CONVERGENCE-2026-02-26.md:1 (renamed from non-prefixed filename after user correction)
