@@ -11,7 +11,10 @@ license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=4.4.2",
+    "matplotlib>=3.9",
     "numpy>=2.3.5",
+    "pandas>=2.0",
+    "seaborn>=0.13",
     "torch>=2.9.1",
     "transformers>=4.57.3",
     "wandb>=0.24.0",
@@ -33,7 +36,10 @@ extend-select = ["I"]
 [tool.ruff.lint.isort]
 known-third-party = [
     "datasets",
+    "matplotlib",
     "numpy",
+    "pandas",
+    "seaborn",
     "torch",
     "transformers",
     "wandb",
