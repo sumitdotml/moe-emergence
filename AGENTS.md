@@ -165,7 +165,9 @@ Open items from cross-model audit (debate 008):
 - **P1: Stale docs** — `docs/DATA-PIPELINE.md` and V3 spec contain outdated dataset refs. DATA-PIPELINE.md marked superseded; V3 snippets are historical.
 - ~~**High P2: Eval split formula** — Fixed in `39b069e`. Docstring now accurately describes small-n behavior.~~
 
-## Current Status (2026-02-24)
+## Current Status (2026-02-27)
+
+**Project complete.** All phases finished including technical report.
 
 **Completed:**
 
@@ -192,8 +194,20 @@ Open items from cross-model audit (debate 008):
   - MoE beats dense by 3.6% overall, 14% on math, 2.1% on code; dense wins prose by 1.6%
   - Top-2 does not meaningfully outperform top-1; validates top-1 routing choice
   - Without LB loss, expert collapse within 500 steps; z-loss alone doesn't prevent it
+- Phase 5 (Experiments) [DONE]
+  - MoE main run: eval/loss=2.080, beats dense by 3.6%
+  - No-LB ablation: collapsed at step 500
+  - Top-2 directional: eval/loss=2.077, marginal 0.14% over top-1
+- Phase 6 (Post-training analysis and visualization) [DONE]
+  - `analysis.py`: domain-level expert activation, token-type routing, router entropy extraction
+  - `visualize.py`: heatmaps, training curves, collapse comparison, token-type routing, entropy plots
+  - 12 publication-quality figures in `figures/`
+  - Analysis notebook: `notebooks/phase5_analysis.ipynb`
+- Phase 7 (Technical report) [DONE]
+  - Published at: `sumit.ml/research/expert-emergence-in-moe`
+  - Source: `/Users/sumit/playground/sumit.ml/src/content/research/expert-emergence-in-moe.mdx`
 
-**Current Phase:** Phase 5 — post-training analysis and visualization
+**Current Phase:** Complete
 
 **Training Plan:** `docs/project-design/PHASE-4-TRAINING-PLAN.md` (reviewed, amended with debate 009 resolutions)
 
@@ -250,17 +264,7 @@ These items require verification before implementation. Must not assume they are
 | Formatting artifacts     | Check for whitespace/invisible char anomalies in all datasets     | **DONE** — see decision 011             |
 | Shuffle buffer formula   | Is `max(1000, size_mb*200)` justified? Where did this come from?  | **DONE** — not needed, see decision 006 |
 
-**Next Actions:**
-
-1. ~~Run budgeted experiments: dense → moe-main~~ [DONE]
-2. ~~Run ablation experiments: no-lb → top-2~~ [DONE]
-3. ~~Upload models to HuggingFace~~ [DONE — `sumitdotml/moe-emergence`]
-4. Phase 5: post-training analysis and visualization (all runs on CPU/MPS locally)
-   - Domain-level expert activation analysis (which experts specialize on which domains)
-   - Fine-grained token-type routing (Python keywords vs operators vs strings)
-   - Router entropy over training visualization
-   - Collapse comparison visualization (with LB vs without LB)
-   - Publication-quality figures for technical report
+**All planned work complete.**
 
 ## Budget Constraint
 
