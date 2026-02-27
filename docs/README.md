@@ -113,6 +113,11 @@ When writing the final report, pull from:
 
 - `docs/experiments/run-001-gpt2-integration-verification.md` (Phase 2 verification)
 - `docs/experiments/run-002-phase4-hardening-shakedown.md` (Phase 4 hardening verification)
+- `docs/experiments/run-003-gpu-shakedown-primeintellect.md` (GPU shakedown)
+- `docs/experiments/run-004-dense-baseline.md` (Dense baseline — eval/loss=2.157)
+- `docs/experiments/run-005-moe-main.md` (MoE main — eval/loss=2.080)
+- `docs/experiments/run-006-no-lb-ablation.md` (No-LB ablation — collapsed at step 500)
+- `docs/experiments/run-007-top2-directional.md` (Top-2 directional — eval/loss=2.077)
 
 ---
 
@@ -127,24 +132,16 @@ When writing the final report, pull from:
 | 005 | 2025-12-26 | `data.py` fix       | —                  |
 | 006 | 2026-02-18 | Phase 4 review      | Findings documented |
 | 007 | 2026-02-18 | Phase 4 fixes       | Implemented         |
+| 008 | 2026-02-26 | Phase 5 analysis fix | Documented          |
 
 ---
 
 ## Project Status
 
-**Current Phase:** Phase 4 (Training hardening complete; pre-training shakedown complete)
+**Current Phase:** Complete (all phases finished 2026-02-27)
 
-**Last Verification:** 2026-02-18 shakedown + resume checks (dense + MoE)
-
-**Phase 3 Completed:**
-- Data pipeline with token balancing
-- Shuffle-before-truncate (decision 012)
-- W&B tracking utilities (decision 009)
-- Multi-model code review (006-tracking-py-review.md)
-
-**Next Steps:**
-
-1. Commit Phase 4 hardening patch (`train.py`, `tracking.py`, docs updates)
-2. Run budgeted training sequence (dense baseline then MoE main)
-3. Run no-LB ablation and monitor collapse behavior
-4. Generate Phase 5 analysis artifacts (domain specialization + routing stats)
+- Phase 1-3: MoE components, GPT-2 integration, dataset preparation
+- Phase 4: Training infrastructure with presets, checkpointing, collapse detection
+- Phase 5: All 4 training runs complete (dense, MoE main, no-LB ablation, top-2 directional)
+- Phase 6: Post-training analysis and visualization (12 publication-quality figures)
+- Phase 7: Technical report published at `sumit.ml/research/expert-emergence-in-moe`

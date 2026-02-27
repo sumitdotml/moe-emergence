@@ -33,7 +33,7 @@ Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence
 - [x] Full integration verification with actual GPT-2 model (10/10 tests passed)
   - See: `docs/experiments/run-001-gpt2-integration-verification.md`
 
-### Phase 3: Dataset Preparation
+### Phase 3: Dataset Preparation [DONE]
 
 - [x] Sequence packing (not padding)
 - [x] `PackedMixedDomainDataset` class
@@ -47,7 +47,7 @@ Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence
 - [x] Shuffle-before-truncate — see decision 012
 - [x] W&B experiment tracking — see decision 009, `moe_emergence/tracking.py`
 
-### Phase 4: Training Infrastructure
+### Phase 4: Training Infrastructure [DONE]
 
 - [x] `train.py` with presets (shakedown, dense, moe-main, no-lb, top2)
 - [x] Safetensors model snapshots + JSON sidecar, full resume `.pt` checkpoints
@@ -56,17 +56,22 @@ Training curves on W&B: [dense baseline](https://wandb.ai/sumit-ml/moe-emergence
 - [x] Shakedown runs (dense + MoE)
 - [x] Budgeted runs (dense → moe-main → no-lb → top2)
 
-### Phase 5: Experiments
+### Phase 5: Experiments [DONE]
 
 - [x] MoE main run (8 experts, top-1, LB on) — eval/loss=2.080, beats dense by 3.6%
 - [x] Ablation: no load balancing — collapsed at step 500, confirms LB loss is essential
 - [x] Ablation: top-2 routing — eval/loss=2.077, marginal 0.14% over top-1
 
-### Phase 6: Analysis
+### Phase 6: Analysis [DONE]
 
-- [ ] Expert specialization heatmaps
-- [ ] Router entropy over training
-- [ ] Fine-grained token-type routing
+- [x] Expert specialization heatmaps
+- [x] Router entropy over training
+- [x] Fine-grained token-type routing
+- [x] Collapse comparison and trajectory plots
+
+### Phase 7: Technical Report [DONE]
+
+- [x] Technical report: [sumit.ml/research/expert-emergence-in-moe](https://sumit.ml/research/expert-emergence-in-moe)
 
 ## Code to Write
 
@@ -101,7 +106,8 @@ Source: [modeling_gpt2.py](https://github.com/huggingface/transformers/blob/main
 | Sequence Packing     | ✅     | `data.py`                    | Efficient dataset without padding            |
 | Training Loop        | ✅     | `train.py`                   | LM + LB + Z losses, grad accum, eval loop    |
 | Collapse Detection   | ✅     | `train.py`                   | Early stopping for no-lb ablation            |
-| Visualization        | ⬜     | —                            | Heatmaps, entropy plots                      |
+| Analysis             | ✅     | `analysis.py`                | Expert activation analysis, routing stats     |
+| Visualization        | ✅     | `visualize.py`               | Heatmaps, entropy plots, collapse figures     |
 
 ## Known Bottlenecks
 
